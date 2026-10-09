@@ -1628,11 +1628,64 @@ window.takeWeeklyBackup = () => {
 // ==========================================
 // MEMBER DETAILS & EDIT MODAL
 // ==========================================
+function getMemberRemainingDaysInfo(member, statusObj) {
+  let badgeClass = 'yellow';
+  let badgeText = 'Active';
+  let remainingDaysText = '';
+  let daysColor = '#22c55e'; // Green
+
+  if (member.is_active === false) {
+    badgeClass = 'expired';
+    badgeText = 'Inactive';
+    remainingDaysText = 'Membership Inactive';
+    daysColor = '#94a3b8';
+  } else if (!statusObj || !statusObj.sub) {
+    badgeClass = 'expired';
+    badgeText = 'No Plan';
+    remainingDaysText = 'No active plan';
+    daysColor = '#94a3b8';
+  } else if (statusObj.daysRemaining < 0) {
+    badgeClass = 'expired';
+    badgeText = 'Expired';
+    const past = Math.abs(statusObj.daysRemaining);
+    remainingDaysText = `Expired (${past}d ago)`;
+    daysColor = '#ef4444';
+  } else if (statusObj.daysRemaining === 0) {
+    badgeClass = 'red';
+    badgeText = 'Expires Today';
+    remainingDaysText = 'Expires Today!';
+    daysColor = '#ef4444';
+  } else if (statusObj.daysRemaining === 1) {
+    badgeClass = 'red';
+    badgeText = '1d Left';
+    remainingDaysText = '1 day remaining';
+    daysColor = '#ef4444';
+  } else if (statusObj.daysRemaining <= 3) {
+    badgeClass = 'red';
+    badgeText = `${statusObj.daysRemaining}d Left (Critical)`;
+    remainingDaysText = `${statusObj.daysRemaining} days remaining`;
+    daysColor = '#ef4444';
+  } else if (statusObj.daysRemaining <= 7) {
+    badgeClass = 'yellow';
+    badgeText = `${statusObj.daysRemaining}d Left`;
+    remainingDaysText = `${statusObj.daysRemaining} days remaining`;
+    daysColor = '#f59e0b';
+  } else {
+    badgeClass = 'yellow';
+    badgeText = 'Active';
+    remainingDaysText = `${statusObj.daysRemaining} days remaining`;
+    daysColor = '#22c55e';
+  }
+
+  return { badgeClass, badgeText, remainingDaysText, daysColor };
+}
+
 window.openMemberDetailModal = (memberId) => {
   const member = state.members.find(m => m.id === memberId);
   if (!member) return;
 
   const statusObj = state.memberStatusMap[memberId] || {};
+  const daysInfo = getMemberRemainingDaysInfo(member, statusObj);
   const modal = document.createElement('div');
   modal.id = 'member-detail-modal';
   modal.className = 'modal-overlay';
@@ -1659,13 +1712,20 @@ window.openMemberDetailModal = (memberId) => {
             <div style="font-size: 16px; font-weight: 800; color: #fff;">${statusObj.planName || 'No Active Plan'}</div>
           </div>
           <div style="text-align: right;">
-            <span class="alert-tag ${statusObj.alertStatus === 'critical' ? 'red' : statusObj.alertStatus === 'expiring' ? 'yellow' : statusObj.alertStatus === 'active' ? 'yellow' : 'expired'}" style="font-size: 11px;">
-              ${statusObj.alertStatus === 'expired' ? 'Expired' : statusObj.alertStatus === 'inactive' ? 'Inactive' : `${statusObj.daysRemaining} Days Left`}
+            <span class="alert-tag ${daysInfo.badgeClass}" style="font-size: 11px;">
+              ${daysInfo.badgeText}
             </span>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle); font-size: 12px;">
+          <div>
+            <span style="color: var(--text-muted); display: block;">Remaining Days</span>
+            <strong style="color: ${daysInfo.daysColor}; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+              <i data-lucide="clock" style="width: 13px; height: 13px;"></i>
+              ${daysInfo.remainingDaysText}
+            </strong>
+          </div>
           <div>
             <span style="color: var(--text-muted); display: block;">Valid Till</span>
             <strong style="color: #fff;">${statusObj.endDate ? new Date(statusObj.endDate).toLocaleDateString('en-IN') : 'N/A'}</strong>
@@ -1934,7 +1994,7 @@ function renderMembersView() {
             <th>Phone</th>
             <th>Aadhaar</th>
             <th>Blood Group</th>
-            <th>Status & Validity</th>
+            <th>Status & Remaining Days</th>
             <th>Joined On</th>
             <th>Actions</th>
           </tr>
@@ -1951,25 +2011,7 @@ function renderMembersView() {
             </tr>
           ` : filtered.map(m => {
             const statusObj = state.memberStatusMap[m.id] || {};
-            let badgeClass = 'yellow';
-            let badgeText = 'Active';
-
-            if (m.is_active === false) {
-              badgeClass = 'expired';
-              badgeText = 'Inactive';
-            } else if (statusObj.alertStatus === 'expired') {
-              badgeClass = 'expired';
-              badgeText = 'Expired';
-            } else if (statusObj.alertStatus === 'critical') {
-              badgeClass = 'red';
-              badgeText = `Expiring (${statusObj.daysRemaining}d)`;
-            } else if (statusObj.alertStatus === 'expiring') {
-              badgeClass = 'yellow';
-              badgeText = `Expiring (${statusObj.daysRemaining}d)`;
-            } else {
-              badgeClass = 'yellow';
-              badgeText = 'Active';
-            }
+            const daysInfo = getMemberRemainingDaysInfo(m, statusObj);
 
             return `
               <tr>
@@ -1981,11 +2023,15 @@ function renderMembersView() {
                 <td><span style="font-family: monospace; letter-spacing: 0.5px; font-weight: 600; color: #fff;">${m.aadhaar || ('5678 1234 ' + (m.aadhaar_last4 || '4821'))}</span></td>
                 <td><span style="color: var(--primary); font-weight: 700;">${m.blood_group || 'N/A'}</span></td>
                 <td>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="alert-tag ${badgeClass}" style="font-size: 11px;">${badgeText}</span>
-                    <button class="btn-sm btn-call" style="padding: 4px 8px; font-size: 11px; min-height: 28px;" onclick="window.openMemberDetailModal('${m.id}')" title="Edit Member Data">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                    <span class="alert-tag ${daysInfo.badgeClass}" style="font-size: 11px;">${daysInfo.badgeText}</span>
+                    <button class="btn-sm btn-call" style="padding: 3px 8px; font-size: 11px; min-height: 26px;" onclick="window.openMemberDetailModal('${m.id}')" title="Edit Member Data">
                       <i data-lucide="edit-3" style="width: 12px; height: 12px;"></i> Edit
                     </button>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: ${daysInfo.daysColor};">
+                    <i data-lucide="clock" style="width: 13px; height: 13px;"></i>
+                    <span>${daysInfo.remainingDaysText}</span>
                   </div>
                 </td>
                 <td>${new Date(m.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
@@ -2017,25 +2063,7 @@ function renderMembersView() {
         </div>
       ` : filtered.map(m => {
         const statusObj = state.memberStatusMap[m.id] || {};
-        let badgeClass = 'yellow';
-        let badgeText = 'Active';
-
-        if (m.is_active === false) {
-          badgeClass = 'expired';
-          badgeText = 'Inactive';
-        } else if (statusObj.alertStatus === 'expired') {
-          badgeClass = 'expired';
-          badgeText = 'Expired';
-        } else if (statusObj.alertStatus === 'critical') {
-          badgeClass = 'red';
-          badgeText = `Expiring (${statusObj.daysRemaining}d)`;
-        } else if (statusObj.alertStatus === 'expiring') {
-          badgeClass = 'yellow';
-          badgeText = `Expiring (${statusObj.daysRemaining}d)`;
-        } else {
-          badgeClass = 'yellow';
-          badgeText = 'Active';
-        }
+        const daysInfo = getMemberRemainingDaysInfo(m, statusObj);
 
         return `
           <div class="member-mobile-card">
@@ -2045,14 +2073,25 @@ function renderMembersView() {
                 <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">+91 ${m.phone} • ${statusObj.planName || 'Plan'}</div>
               </div>
               <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                <span class="alert-tag ${badgeClass}" style="font-size: 10px;">${badgeText}</span>
+                <span class="alert-tag ${daysInfo.badgeClass}" style="font-size: 10px;">${daysInfo.badgeText}</span>
                 <button class="btn-sm btn-call" style="padding: 4px 8px; font-size: 11px; min-height: 28px;" onclick="window.openMemberDetailModal('${m.id}')" title="Edit Member Data">
                   <i data-lucide="edit-3" style="width: 12px; height: 12px;"></i> Edit
                 </button>
               </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 8px; flex-wrap: wrap; gap: 6px;">
+            <!-- Remaining Days High-Visibility Bar for Each Individual -->
+            <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 7px 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+              <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px;">
+                <i data-lucide="hourglass" style="width: 13px; height: 13px; color: var(--primary);"></i> Remaining Days
+              </span>
+              <span style="font-size: 12px; font-weight: 800; color: ${daysInfo.daysColor}; display: flex; align-items: center; gap: 4px;">
+                <i data-lucide="clock" style="width: 13px; height: 13px;"></i>
+                ${daysInfo.remainingDaysText}
+              </span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 8px; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
               <span>Aadhaar: <strong style="font-family: monospace; color: #fff;">${m.aadhaar || ('5678 1234 ' + (m.aadhaar_last4 || '4821'))}</strong></span>
               <span>Blood: <strong style="color: var(--primary);">${m.blood_group || 'N/A'}</strong></span>
               <span>Joined: ${new Date(m.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
