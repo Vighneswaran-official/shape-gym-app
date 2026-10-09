@@ -32,6 +32,13 @@ const state = {
   }
 };
 
+// Global navigation helper accessible across modules and inline HTML onclick handlers
+window.navigateTo = (tab) => {
+  state.currentTab = tab;
+  window.scrollTo(0, 0);
+  renderAppShell();
+};
+
 // ==========================================
 // INITIALIZATION & SESSION RESTORE
 // ==========================================
@@ -551,7 +558,7 @@ function renderAppShell() {
               <span>${state.isDemoMode ? 'Demo' : 'Online'}</span>
             </div>
 
-            <button class="btn-primary" style="padding: 8px 16px; font-size: 13px;" id="quick-admission-btn">
+            <button class="btn-primary" style="padding: 8px 16px; font-size: 13px;" id="quick-admission-btn" onclick="window.navigateTo('admission')">
               <i data-lucide="plus"></i> Add Member
             </button>
 
@@ -567,25 +574,25 @@ function renderAppShell() {
 
       <!-- Mobile Bottom Navigation (Ultra-responsive 5-tab with floating FAB) -->
       <nav class="mobile-bottom-nav">
-        <button class="mobile-nav-item ${state.currentTab === 'dashboard' ? 'active' : ''}" data-tab="dashboard">
+        <button class="mobile-nav-item ${state.currentTab === 'dashboard' ? 'active' : ''}" data-tab="dashboard" onclick="window.navigateTo('dashboard')">
           <i data-lucide="layout-dashboard"></i>
           <span>Home</span>
         </button>
-        <button class="mobile-nav-item ${state.currentTab === 'members' ? 'active' : ''}" data-tab="members">
+        <button class="mobile-nav-item ${state.currentTab === 'members' ? 'active' : ''}" data-tab="members" onclick="window.navigateTo('members')">
           <i data-lucide="users"></i>
           <span>Members</span>
         </button>
-        <button class="mobile-nav-fab ${state.currentTab === 'admission' ? 'active' : ''}" data-tab="admission" title="New Admission">
+        <button class="mobile-nav-fab ${state.currentTab === 'admission' ? 'active' : ''}" data-tab="admission" title="New Admission" onclick="window.navigateTo('admission')">
           <div class="fab-circle">
             <i data-lucide="user-plus"></i>
           </div>
           <span>Admission</span>
         </button>
-        <button class="mobile-nav-item ${state.currentTab === 'plans' ? 'active' : ''}" data-tab="plans">
+        <button class="mobile-nav-item ${state.currentTab === 'plans' ? 'active' : ''}" data-tab="plans" onclick="window.navigateTo('plans')">
           <i data-lucide="dumbbell"></i>
           <span>Plans</span>
         </button>
-        <button class="mobile-nav-item ${state.currentTab === 'accounts' ? 'active' : ''}" data-tab="accounts">
+        <button class="mobile-nav-item ${state.currentTab === 'accounts' ? 'active' : ''}" data-tab="accounts" onclick="window.navigateTo('accounts')">
           <i data-lucide="pie-chart"></i>
           <span>Accounts</span>
         </button>
@@ -597,10 +604,12 @@ function renderAppShell() {
 
   // Navigation handlers (works for both desktop sidebar and mobile bottom nav)
   document.querySelectorAll('[data-tab]').forEach(el => {
-    el.addEventListener('click', () => {
-      state.currentTab = el.getAttribute('data-tab');
-      window.scrollTo(0, 0);
-      renderAppShell();
+    el.addEventListener('click', (e) => {
+      const target = e.currentTarget || el;
+      const tab = target.getAttribute('data-tab');
+      if (tab) {
+        window.navigateTo(tab);
+      }
     });
   });
 
@@ -615,8 +624,7 @@ function renderAppShell() {
   document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
 
   document.getElementById('quick-admission-btn')?.addEventListener('click', () => {
-    state.currentTab = 'admission';
-    renderAppShell();
+    window.navigateTo('admission');
   });
 
   // Render currently selected view
@@ -931,23 +939,27 @@ function renderAdmissionView() {
   const content = document.getElementById('main-content');
   document.getElementById('page-title').innerText = 'New Member Admission';
 
+  // Reset signature stroke buffers for clean new admission
+  state.activeCanvasStrokes.client = [];
+  state.activeCanvasStrokes.manager = [];
+
   const defaultPlan = state.plans[0] || { name: '3 Months', duration_days: 90, fee: 4999 };
   const today = new Date().toISOString().split('T')[0];
   const expiryDate = new Date(Date.now() + defaultPlan.duration_days * 86400000).toISOString().split('T')[0];
 
   content.innerHTML = `
-    <div style="max-width: 900px; margin: 0 auto;">
-      <div class="metric-card" style="padding: 32px;">
-        <h2 style="font-size: 24px; margin-bottom: 6px;">Front-Desk Enrollment Form</h2>
-        <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 28px;">
+    <div class="admission-container">
+      <div class="admission-card">
+        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 6px; color: var(--text-main);">Front-Desk Enrollment Form</h2>
+        <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">
           Register member, capture dual signatures, and produce the official PDF admission receipt.
         </p>
 
         <form id="admission-form">
           <!-- 1. Personal Details -->
-          <h3 style="font-size: 16px; color: var(--primary); margin-bottom: 16px;">1. Personal Details</h3>
+          <h3 style="font-size: 14px; font-weight: 800; color: var(--primary); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px;">1. Personal Details</h3>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-grid-2">
             <div class="form-group">
               <label class="form-label">Full Name *</label>
               <input type="text" id="adm-name" class="form-input" required placeholder="e.g. Ramesh Kumar" />
@@ -959,7 +971,7 @@ function renderAdmissionView() {
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+          <div class="form-grid-3" style="margin-top: 14px;">
             <div class="form-group">
               <label class="form-label">Aadhaar (12 Digits) *</label>
               <input type="text" id="adm-aadhaar" class="form-input" maxlength="12" required placeholder="123456789012" />
@@ -986,18 +998,18 @@ function renderAdmissionView() {
             </div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" style="margin-top: 14px;">
             <label class="form-label">Residential Address</label>
             <input type="text" id="adm-address" class="form-input" placeholder="Flat, Street, Area, City" />
           </div>
 
-          <div class="form-group">
+          <div class="form-group" style="margin-top: 14px;">
             <label class="form-label">Health History / Medical Information</label>
             <textarea id="adm-health" class="form-textarea" rows="2" placeholder="Injuries, asthma, allergies, medications (Encrypted)"></textarea>
           </div>
 
           <!-- 2. Programs & Plan -->
-          <h3 style="font-size: 16px; color: var(--primary); margin: 28px 0 16px;">2. Programs & Membership Plan</h3>
+          <h3 style="font-size: 14px; font-weight: 800; color: var(--primary); margin: 26px 0 14px; text-transform: uppercase; letter-spacing: 0.5px;">2. Programs & Membership Plan</h3>
 
           <div class="form-group">
             <label class="form-label">Enrolled Programs</label>
@@ -1010,7 +1022,7 @@ function renderAdmissionView() {
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-grid-2" style="margin-top: 14px;">
             <div class="form-group">
               <label class="form-label">Membership Plan</label>
               <select id="adm-plan-select" class="form-select">
@@ -1029,9 +1041,9 @@ function renderAdmissionView() {
           </div>
 
           <!-- 3. Payment -->
-          <h3 style="font-size: 16px; color: var(--primary); margin: 28px 0 16px;">3. Fees & Payment Collection</h3>
+          <h3 style="font-size: 14px; font-weight: 800; color: var(--primary); margin: 26px 0 14px; text-transform: uppercase; letter-spacing: 0.5px;">3. Fees & Payment Collection</h3>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+          <div class="form-grid-3">
             <div class="form-group">
               <label class="form-label">Admission Fee (₹)</label>
               <input type="number" id="adm-fee" class="form-input" value="0" />
@@ -1053,39 +1065,41 @@ function renderAdmissionView() {
           </div>
 
           <!-- 4. India DPDP Act Consent -->
-          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); padding: 14px; border-radius: 12px; margin: 24px 0;">
-            <label style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 13px;">
-              <input type="checkbox" id="adm-consent" required style="margin-top: 3px; accent-color: var(--primary);" />
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); padding: 14px; border-radius: 12px; margin: 22px 0;">
+            <label style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 13px; line-height: 1.5;">
+              <input type="checkbox" id="adm-consent" required style="margin-top: 3px; accent-color: var(--primary); flex-shrink: 0;" />
               <span>I confirm that the client has authorized storing and processing their personal fitness, health, and identity details in compliance with the <strong>India Digital Personal Data Protection (DPDP) Act 2023</strong>.</span>
             </label>
           </div>
 
           <!-- 5. Dual Signature Pads -->
-          <h3 style="font-size: 16px; color: var(--primary); margin: 28px 0 16px;">4. Finger-Drawn Signatures (Mandatory)</h3>
+          <h3 style="font-size: 14px; font-weight: 800; color: var(--primary); margin: 26px 0 14px; text-transform: uppercase; letter-spacing: 0.5px;">4. Finger-Drawn Signatures (Mandatory)</h3>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
-            <div>
+          <div class="signature-grid">
+            <div class="form-group">
               <label class="form-label">Client / Member Signature *</label>
               <div class="signature-box">
-                <canvas id="client-signature" class="signature-canvas" width="400" height="150"></canvas>
+                <canvas id="client-signature" class="signature-canvas"></canvas>
                 <div class="signature-controls">
+                  <span style="font-size: 11px; color: var(--text-secondary);">Draw with finger</span>
                   <button type="button" class="btn-sm btn-call" onclick="window.clearSignature('client')">Clear</button>
                 </div>
               </div>
             </div>
 
-            <div>
+            <div class="form-group">
               <label class="form-label">Manager / Staff Signature *</label>
               <div class="signature-box">
-                <canvas id="manager-signature" class="signature-canvas" width="400" height="150"></canvas>
+                <canvas id="manager-signature" class="signature-canvas"></canvas>
                 <div class="signature-controls">
+                  <span style="font-size: 11px; color: var(--text-secondary);">Draw with finger</span>
                   <button type="button" class="btn-sm btn-call" onclick="window.clearSignature('manager')">Clear</button>
                 </div>
               </div>
             </div>
           </div>
 
-          <button type="submit" id="submit-admission-btn" class="btn-primary" style="width: 100%; justify-content: center; padding: 16px; font-size: 16px;">
+          <button type="submit" id="submit-admission-btn" class="btn-primary" style="width: 100%; justify-content: center; padding: 16px; font-size: 15px; font-weight: 800; border-radius: var(--radius-md); box-sizing: border-box; text-align: center; white-space: normal; line-height: 1.3;">
             <i data-lucide="check-circle"></i> Complete Admission & Download Official Receipt
           </button>
         </form>
@@ -1307,19 +1321,40 @@ function setupSignatureCanvas(canvasId, type) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
-  // Auto-fit canvas to element width and handle Retina/High-DPI mobile screens
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  const displayWidth = rect.width > 50 ? rect.width : 360;
-  canvas.width = displayWidth * dpr;
-  canvas.height = 150 * dpr;
+  const initCanvas = () => {
+    const parent = canvas.parentElement;
+    const parentWidth = parent ? parent.clientWidth : 320;
+    const displayWidth = parentWidth > 50 ? parentWidth : 320;
+    const displayHeight = 150;
+    const dpr = window.devicePixelRatio || 1;
 
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.strokeStyle = '#ff6600'; /* Vivid Athletic Orange signature ink */
-  ctx.lineWidth = 3;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+    canvas.style.width = '100%';
+    canvas.style.height = `${displayHeight}px`;
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    ctx.strokeStyle = '#ff6600'; /* Vivid Athletic Orange signature ink */
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Redraw strokes if any
+    const strokes = state.activeCanvasStrokes[type] || [];
+    if (strokes.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(strokes[0].x, strokes[0].y);
+      for (let i = 1; i < strokes.length; i++) {
+        ctx.lineTo(strokes[i].x, strokes[i].y);
+      }
+      ctx.stroke();
+    }
+  };
+
+  initCanvas();
+  window.addEventListener('resize', initCanvas, { passive: true });
 
   let drawing = false;
 
@@ -1336,6 +1371,7 @@ function setupSignatureCanvas(canvasId, type) {
   const start = (e) => {
     drawing = true;
     const pos = getPos(e);
+    const ctx = canvas.getContext('2d');
     ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
     state.activeCanvasStrokes[type].push(pos);
@@ -1345,6 +1381,7 @@ function setupSignatureCanvas(canvasId, type) {
   const draw = (e) => {
     if (!drawing) return;
     const pos = getPos(e);
+    const ctx = canvas.getContext('2d');
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
     state.activeCanvasStrokes[type].push(pos);
@@ -1369,7 +1406,14 @@ window.clearSignature = (type) => {
   const canvas = document.getElementById(`${type}-signature`);
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#ff6600';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   state.activeCanvasStrokes[type] = [];
 };
 
@@ -1393,7 +1437,7 @@ function renderMembersView() {
   content.innerHTML = `
     <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; width: 100%;">
       <input type="text" id="member-search-input" class="form-input" style="flex: 1; min-width: 200px; width: 100%;" placeholder="Search by name or mobile..." value="${state.searchQuery}" />
-      <button class="btn-primary" style="flex-shrink: 0;" onclick="state.currentTab = 'admission'; window.scrollTo(0,0); renderAppShell();">
+      <button class="btn-primary" style="flex-shrink: 0;" onclick="window.navigateTo('admission')">
         <i data-lucide="user-plus"></i> New Member
       </button>
     </div>
@@ -1413,7 +1457,14 @@ function renderMembersView() {
         </thead>
         <tbody>
           ${filtered.length === 0 ? `
-            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px;">No members found.</td></tr>
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                <p style="margin-bottom: 14px;">No members found.</p>
+                <button class="btn-primary" onclick="window.navigateTo('admission')">
+                  <i data-lucide="user-plus"></i> Enroll New Member
+                </button>
+              </td>
+            </tr>
           ` : filtered.map(m => `
             <tr>
               <td><strong>${m.name}</strong></td>
@@ -1432,7 +1483,10 @@ function renderMembersView() {
     <div class="member-mobile-cards">
       ${filtered.length === 0 ? `
         <div class="metric-card" style="text-align: center; padding: 32px;">
-          <p style="color: var(--text-muted); font-size: 13px;">No members found matching search.</p>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;">No members found matching search.</p>
+          <button class="btn-primary" onclick="window.navigateTo('admission')">
+            <i data-lucide="user-plus"></i> Enroll New Member
+          </button>
         </div>
       ` : filtered.map(m => `
         <div class="member-mobile-card">
