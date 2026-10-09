@@ -9,6 +9,7 @@ const state = {
   user: null,
   profile: null,
   currentTab: 'dashboard',
+  memberFilterTab: 'all',
   programs: [],
   plans: [],
   members: [],
@@ -16,6 +17,13 @@ const state = {
   payments: [],
   expenses: [],
   renewalsDue: [],
+  nearExpiryList: [],
+  inactiveOrExpiredList: [],
+  newThisWeekCount: 0,
+  newThisMonthCount: 0,
+  newThisWeekMembers: [],
+  newThisMonthMembers: [],
+  memberStatusMap: {},
   todayCollection: 0,
   totalPendingDues: 0,
   activeCount: 0,
@@ -107,6 +115,8 @@ async function loadDatabaseData() {
 
 function computeDashboardMetrics() {
   const today = new Date().toISOString().split('T')[0];
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
 
   // Today's collection
   state.todayCollection = state.payments
@@ -124,59 +134,102 @@ function computeDashboardMetrics() {
   let active = 0;
   let totalDues = 0;
   const renewals = [];
+  const nearExpiryList = [];
+  const inactiveOrExpiredList = [];
+  state.memberStatusMap = {};
 
-  const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
+  state.members.forEach(member => {
+    const sub = latestSubs[member.id];
+    let alertStatus = 'inactive';
+    let daysRemaining = -999;
+    let balance = 0;
+    let endDate = null;
+    let planName = 'No Active Plan';
+    let planId = null;
+    let planFee = 0;
 
-  Object.values(latestSubs).forEach(sub => {
-    const member = state.members.find(m => m.id === sub.member_id);
-    if (!member) return;
+    if (member.is_active === false) {
+      alertStatus = 'inactive';
+    } else if (sub) {
+      totalDues += Number(sub.balance) || 0;
+      balance = Number(sub.balance) || 0;
+      endDate = sub.end_date;
+      planName = sub.plan_name_snapshot || 'Plan';
+      planId = sub.plan_id;
+      planFee = sub.fee_snapshot || 0;
 
-    totalDues += Number(sub.balance) || 0;
+      const subEndDate = new Date(sub.end_date);
+      subEndDate.setHours(0, 0, 0, 0);
+      daysRemaining = Math.round((subEndDate - todayDate) / (1000 * 60 * 60 * 24));
 
-    const endDate = new Date(sub.end_date);
-    endDate.setHours(0, 0, 0, 0);
-
-    const diffDays = Math.round((endDate - todayDate) / (1000 * 60 * 60 * 24));
-
-    let alertStatus = 'active';
-    if (diffDays < 0) {
-      alertStatus = 'expired'; // Dark red/grey
-    } else if (diffDays <= 3) {
-      alertStatus = 'critical'; // Red
-      active++;
-    } else if (diffDays <= 7) {
-      alertStatus = 'expiring'; // Yellow
-      active++;
-    } else {
-      active++;
+      if (daysRemaining < 0) {
+        alertStatus = 'expired';
+      } else if (daysRemaining <= 3) {
+        alertStatus = 'critical';
+        active++;
+      } else if (daysRemaining <= 7) {
+        alertStatus = 'expiring';
+        active++;
+      } else {
+        alertStatus = 'active';
+        active++;
+      }
     }
 
-    if (alertStatus !== 'active') {
-      renewals.push({
-        memberId: member.id,
-        subscriptionId: sub.id,
-        name: member.name,
-        phone: member.phone,
-        planName: sub.plan_name_snapshot,
-        planId: sub.plan_id,
-        planFee: sub.fee_snapshot,
-        endDate: sub.end_date,
-        daysRemaining: diffDays,
-        alertStatus,
-        balance: Number(sub.balance) || 0
-      });
+    const memberStatusObj = {
+      memberId: member.id,
+      member,
+      sub,
+      name: member.name,
+      phone: member.phone,
+      planName,
+      planId,
+      planFee,
+      endDate,
+      daysRemaining,
+      alertStatus,
+      balance
+    };
+
+    state.memberStatusMap[member.id] = memberStatusObj;
+
+    if (alertStatus === 'critical' || alertStatus === 'expiring') {
+      nearExpiryList.push(memberStatusObj);
+      renewals.push(memberStatusObj);
+    } else if (alertStatus === 'expired' || alertStatus === 'inactive') {
+      inactiveOrExpiredList.push(memberStatusObj);
+      if (alertStatus === 'expired') renewals.push(memberStatusObj);
     }
   });
 
   state.activeCount = active;
   state.totalPendingDues = totalDues;
+  state.nearExpiryList = nearExpiryList.sort((a, b) => a.daysRemaining - b.daysRemaining);
+  state.inactiveOrExpiredList = inactiveOrExpiredList.sort((a, b) => b.daysRemaining - a.daysRemaining);
 
-  // Urgency Sort: Critical (<=3d) first, then Expiring (<=7d), then Expired
+  // Renewals Due Urgency Sort
   state.renewalsDue = renewals.sort((a, b) => {
     const order = { critical: 0, expiring: 1, expired: 2 };
     return order[a.alertStatus] - order[b.alertStatus] || a.daysRemaining - b.daysRemaining;
   });
+
+  // New Members joined this week (last 7 days) and this month
+  const sevenDaysAgo = new Date(todayDate.getTime() - 7 * 86400000);
+  const firstDayOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+
+  state.newThisWeekMembers = state.members.filter(m => {
+    if (!m.join_date) return false;
+    const jd = new Date(m.join_date);
+    return jd >= sevenDaysAgo;
+  });
+  state.newThisWeekCount = state.newThisWeekMembers.length;
+
+  state.newThisMonthMembers = state.members.filter(m => {
+    if (!m.join_date) return false;
+    const jd = new Date(m.join_date);
+    return jd >= firstDayOfMonth;
+  });
+  state.newThisMonthCount = state.newThisMonthMembers.length;
 }
 
 // ==========================================
@@ -203,7 +256,10 @@ function loadDemoData() {
 
   const now = new Date();
   const dToday = now.toISOString().split('T')[0];
+  const dMinus2 = new Date(now.getTime() - 2 * 86400000).toISOString().split('T')[0];
   const dMinus4 = new Date(now.getTime() - 4 * 86400000).toISOString().split('T')[0];
+  const dMinus5 = new Date(now.getTime() - 5 * 86400000).toISOString().split('T')[0];
+  const dMinus12 = new Date(now.getTime() - 12 * 86400000).toISOString().split('T')[0];
   const dPlus2 = new Date(now.getTime() + 2 * 86400000).toISOString().split('T')[0];
   const dPlus5 = new Date(now.getTime() + 5 * 86400000).toISOString().split('T')[0];
   const dPlus45 = new Date(now.getTime() + 45 * 86400000).toISOString().split('T')[0];
@@ -218,7 +274,9 @@ function loadDemoData() {
       aadhaar_last4: '4821',
       blood_group: 'B+',
       age: 28,
-      join_date: '2025-10-10',
+      join_date: dMinus2,
+      is_active: true,
+      health_notes: 'None / Fit',
       photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
     },
     {
@@ -229,7 +287,9 @@ function loadDemoData() {
       aadhaar_last4: '7190',
       blood_group: 'O+',
       age: 25,
-      join_date: '2025-11-01',
+      join_date: dMinus12,
+      is_active: true,
+      health_notes: 'Mild asthma in winter',
       photo_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80'
     },
     {
@@ -241,6 +301,8 @@ function loadDemoData() {
       blood_group: 'A+',
       age: 34,
       join_date: '2025-08-15',
+      is_active: false,
+      health_notes: 'Lower back stiffness',
       photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
     },
     {
@@ -251,7 +313,9 @@ function loadDemoData() {
       aadhaar_last4: '8834',
       blood_group: 'AB+',
       age: 22,
-      join_date: '2026-01-05',
+      join_date: dMinus5,
+      is_active: true,
+      health_notes: 'No medical conditions',
       photo_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80'
     },
     {
@@ -263,7 +327,22 @@ function loadDemoData() {
       blood_group: 'O-',
       age: 31,
       join_date: '2025-06-20',
+      is_active: true,
+      health_notes: 'ACL surgery in 2023',
       photo_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80'
+    },
+    {
+      id: 'mem-6',
+      name: 'Sneha Patel',
+      phone: '9900112233',
+      address: 'BTM Layout 2nd Stage, Bengaluru',
+      aadhaar_last4: '1092',
+      blood_group: 'B+',
+      age: 27,
+      join_date: dMinus2,
+      is_active: true,
+      health_notes: 'General endurance trainee',
+      photo_url: 'https://images.unsplash.com/photo-1548142813-c348350df52b?w=150&auto=format&fit=crop&q=80'
     }
   ];
 
@@ -322,8 +401,20 @@ function loadDemoData() {
       plan_id: 'plan-2',
       plan_name_snapshot: '3 Months Pro Fitness',
       fee_snapshot: 4999,
-      start_date: '2026-02-20',
-      end_date: dPlus45, // Active
+      start_date: '2026-02-15',
+      end_date: dPlus45,
+      amount_due: 4999,
+      amount_paid: 4000,
+      balance: 999
+    },
+    {
+      id: 'sub-6',
+      member_id: 'mem-6',
+      plan_id: 'plan-2',
+      plan_name_snapshot: '3 Months Pro Fitness',
+      fee_snapshot: 4999,
+      start_date: dMinus2,
+      end_date: dPlus45,
       amount_due: 4999,
       amount_paid: 4999,
       balance: 0
@@ -552,11 +643,10 @@ function renderAppShell() {
             <h2 id="page-title" style="font-size: 20px;">Gym Operations</h2>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div class="status-chip">
-              <span class="status-dot" style="${state.isDemoMode ? 'background: var(--primary); box-shadow: 0 0 10px var(--primary);' : ''}"></span>
-              <span>${state.isDemoMode ? 'Demo' : 'Online'}</span>
-            </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="btn-secondary" style="padding: 8px 14px; font-size: 13px;" onclick="window.takeWeeklyBackup()" title="Download Full Weekly Backup">
+              <i data-lucide="cloud-download"></i> Weekly Backup
+            </button>
 
             <button class="btn-primary" style="padding: 8px 16px; font-size: 13px;" id="quick-admission-btn" onclick="window.navigateTo('admission')">
               <i data-lucide="plus"></i> Add Member
@@ -704,6 +794,28 @@ function renderDashboardView() {
         </div>
         <div class="metric-value" style="color: var(--alert-yellow);">${formatInr(state.totalPendingDues)}</div>
         <div class="metric-subtitle">Carried-forward member balances</div>
+      </div>
+
+      <div class="metric-card" style="cursor: pointer;" onclick="state.memberFilterTab = 'new-week'; window.navigateTo('members');">
+        <div class="metric-header">
+          <span class="metric-title">Joined This Week</span>
+          <div class="metric-icon-box" style="background: rgba(255, 102, 0, 0.15); color: var(--primary);">
+            <i data-lucide="sparkles"></i>
+          </div>
+        </div>
+        <div class="metric-value" style="color: var(--primary);">${state.newThisWeekCount}</div>
+        <div class="metric-subtitle">Past 7 days joinees • Click to view</div>
+      </div>
+
+      <div class="metric-card" style="cursor: pointer;" onclick="state.memberFilterTab = 'new-month'; window.navigateTo('members');">
+        <div class="metric-header">
+          <span class="metric-title">Joined This Month</span>
+          <div class="metric-icon-box" style="background: rgba(16, 185, 129, 0.15); color: var(--alert-green);">
+            <i data-lucide="calendar"></i>
+          </div>
+        </div>
+        <div class="metric-value" style="color: var(--alert-green);">${state.newThisMonthCount}</div>
+        <div class="metric-subtitle">Current month joinees • Click to view</div>
       </div>
     </div>
 
@@ -1421,6 +1533,262 @@ window.hasSignatureDrawn = (type) => {
   return state.activeCanvasStrokes[type] && state.activeCanvasStrokes[type].length > 5;
 };
 
+window.setMemberFilter = (tab) => {
+  state.memberFilterTab = tab;
+  renderMembersView();
+};
+
+// ==========================================
+// WEEKLY BACKUP ENGINE
+// ==========================================
+window.takeWeeklyBackup = () => {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  
+  // ISO Week Number
+  const tempDate = new Date(now.getTime());
+  tempDate.setHours(0, 0, 0, 0);
+  tempDate.setDate(tempDate.getDate() + 3 - (tempDate.getDay() + 6) % 7);
+  const week1 = new Date(tempDate.getFullYear(), 0, 4);
+  const weekNum = 1 + Math.round(((tempDate.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+
+  const backupData = {
+    gymName: 'Shape Fitness Club',
+    backupType: 'Weekly Complete Database Archive',
+    weekNumber: weekNum,
+    year: now.getFullYear(),
+    generatedAt: now.toISOString(),
+    metrics: {
+      totalMembers: state.members.length,
+      activeMembers: state.activeCount,
+      nearExpiryCount: state.nearExpiryList.length,
+      inactiveCount: state.inactiveOrExpiredList.length,
+      joinedThisWeek: state.newThisWeekCount,
+      joinedThisMonth: state.newThisMonthCount,
+      todayCollection: state.todayCollection,
+      totalPendingDues: state.totalPendingDues
+    },
+    members: state.members,
+    subscriptions: state.subscriptions,
+    payments: state.payments,
+    expenses: state.expenses,
+    plans: state.plans,
+    programs: state.programs
+  };
+
+  // 1. JSON Backup File
+  const jsonStr = JSON.stringify(backupData, null, 2);
+  const jsonBlob = new Blob([jsonStr], { type: 'application/json' });
+  const jsonUrl = URL.createObjectURL(jsonBlob);
+  const jsonLink = document.createElement('a');
+  jsonLink.href = jsonUrl;
+  jsonLink.download = `ShapeGym_Backup_${now.getFullYear()}_Week${weekNum}_${todayStr}.json`;
+  document.body.appendChild(jsonLink);
+  jsonLink.click();
+  jsonLink.remove();
+
+  // 2. CSV Backup of Members
+  const csvHeaders = ['ID', 'Name', 'Phone', 'Age', 'Blood Group', 'Join Date', 'Status', 'Address', 'Health Notes'];
+  const csvRows = state.members.map(m => [
+    m.id,
+    `"${(m.name || '').replace(/"/g, '""')}"`,
+    m.phone,
+    m.age || '',
+    m.blood_group || '',
+    m.join_date || '',
+    m.is_active === false ? 'Inactive' : 'Active',
+    `"${(m.address || '').replace(/"/g, '""')}"`,
+    `"${(m.health_notes || '').replace(/"/g, '""')}"`
+  ]);
+  const csvContent = [csvHeaders.join(','), ...csvRows.map(r => r.join(','))].join('\n');
+  const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const csvUrl = URL.createObjectURL(csvBlob);
+  const csvLink = document.createElement('a');
+  csvLink.href = csvUrl;
+  csvLink.download = `ShapeGym_Members_Weekly_Backup_${todayStr}.csv`;
+  document.body.appendChild(csvLink);
+  csvLink.click();
+  csvLink.remove();
+
+  const formattedDate = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  localStorage.setItem('shape_last_weekly_backup', formattedDate);
+  confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+  alert(`✅ Weekly Data Backup completed successfully!\n\nDownloaded:\n1. ShapeGym_Backup_${now.getFullYear()}_Week${weekNum}_${todayStr}.json\n2. ShapeGym_Members_Weekly_Backup_${todayStr}.csv\n\nTotal records archived: ${state.members.length} Members, ${state.subscriptions.length} Subscriptions, ${state.payments.length} Payments.`);
+  renderMembersView();
+};
+
+// ==========================================
+// MEMBER DETAILS & EDIT MODAL
+// ==========================================
+window.openMemberDetailModal = (memberId) => {
+  const member = state.members.find(m => m.id === memberId);
+  if (!member) return;
+
+  const statusObj = state.memberStatusMap[memberId] || {};
+  const modal = document.createElement('div');
+  modal.id = 'member-detail-modal';
+  modal.className = 'modal-overlay';
+
+  modal.innerHTML = `
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 20px; font-weight: 800; color: #fff;">Customer Profile & Edit</h2>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            ID: ${member.id} • Joined: ${new Date(member.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+          </p>
+        </div>
+        <button class="close-btn" onclick="document.getElementById('member-detail-modal').remove()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <!-- Membership & Financial Snapshot -->
+      <div style="background: rgba(255, 102, 0, 0.08); border: 1px solid var(--border-orange); border-radius: 12px; padding: 14px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 700;">Current Plan</span>
+            <div style="font-size: 16px; font-weight: 800; color: #fff;">${statusObj.planName || 'No Active Plan'}</div>
+          </div>
+          <div style="text-align: right;">
+            <span class="alert-tag ${statusObj.alertStatus === 'critical' ? 'red' : statusObj.alertStatus === 'expiring' ? 'yellow' : statusObj.alertStatus === 'active' ? 'yellow' : 'expired'}" style="font-size: 11px;">
+              ${statusObj.alertStatus === 'expired' ? 'Expired' : statusObj.alertStatus === 'inactive' ? 'Inactive' : `${statusObj.daysRemaining} Days Left`}
+            </span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle); font-size: 12px;">
+          <div>
+            <span style="color: var(--text-muted); display: block;">Valid Till</span>
+            <strong style="color: #fff;">${statusObj.endDate ? new Date(statusObj.endDate).toLocaleDateString('en-IN') : 'N/A'}</strong>
+          </div>
+          <div>
+            <span style="color: var(--text-muted); display: block;">Pending Balance</span>
+            <strong style="color: ${statusObj.balance > 0 ? 'var(--alert-yellow)' : 'var(--alert-green)'};">${formatInr(statusObj.balance || 0)}</strong>
+          </div>
+          <div>
+            <span style="color: var(--text-muted); display: block;">Plan Fee</span>
+            <strong style="color: #fff;">${formatInr(statusObj.planFee || 0)}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editable Customer Details Form -->
+      <form id="edit-member-form">
+        <h3 style="font-size: 13px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">1. Personal & Contact Information</h3>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Full Name *</label>
+            <input type="text" id="edit-mem-name" class="form-input" value="${member.name}" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Phone Number *</label>
+            <input type="tel" id="edit-mem-phone" class="form-input" maxlength="10" value="${member.phone}" required />
+          </div>
+        </div>
+
+        <div class="form-grid-3" style="margin-top: 14px;">
+          <div class="form-group">
+            <label class="form-label">Age</label>
+            <input type="number" id="edit-mem-age" class="form-input" min="10" max="100" value="${member.age || 25}" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Blood Group</label>
+            <select id="edit-mem-blood" class="form-select">
+              ${['B+', 'O+', 'A+', 'AB+', 'B-', 'O-', 'A-', 'AB-'].map(bg => `
+                <option value="${bg}" ${member.blood_group === bg ? 'selected' : ''}>${bg}</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Membership Status</label>
+            <select id="edit-mem-status" class="form-select">
+              <option value="true" ${member.is_active !== false ? 'selected' : ''}>Active Member</option>
+              <option value="false" ${member.is_active === false ? 'selected' : ''}>Inactive / Suspended</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label class="form-label">Aadhaar (Encrypted Device ID)</label>
+          <input type="text" class="form-input" value="•••• •••• ${member.aadhaar_last4 || '••••'} (AES-256 Protected)" readonly style="background: rgba(255,255,255,0.03); color: var(--alert-green);" />
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label class="form-label">Residential Address</label>
+          <input type="text" id="edit-mem-address" class="form-input" value="${member.address || ''}" placeholder="Street address, city" />
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label class="form-label">Health & Medical History</label>
+          <textarea id="edit-mem-health" class="form-textarea" rows="2" placeholder="Injuries, medications, allergies">${member.health_notes || ''}</textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap;">
+          <button type="submit" class="btn-primary" style="flex: 1; justify-content: center; min-width: 140px;">
+            <i data-lucide="check"></i> Save Changes
+          </button>
+          <button type="button" class="btn-renew" style="flex: 1; justify-content: center; min-width: 130px;" onclick="document.getElementById('member-detail-modal').remove(); window.openRenewalModal('${member.id}', '${member.name}', ${statusObj.balance || 0}, '${statusObj.planId || ''}')">
+            <i data-lucide="refresh-cw"></i> Renew Plan
+          </button>
+          <a href="tel:+91${member.phone}" class="btn-secondary" style="justify-content: center;">
+            <i data-lucide="phone"></i> Call
+          </a>
+          <button type="button" class="btn-whatsapp" style="justify-content: center; padding: 10px 16px;" onclick="window.sendWhatsAppReminder('${member.name}', '${member.phone}', '${statusObj.planName || 'Membership'}', '${statusObj.endDate || ''}', ${statusObj.balance || 0})">
+            <i data-lucide="message-circle"></i> WhatsApp
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  lucide.createIcons();
+
+  document.getElementById('edit-member-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const updatedName = document.getElementById('edit-mem-name').value.trim();
+    const updatedPhone = document.getElementById('edit-mem-phone').value.trim();
+    const updatedAge = Number(document.getElementById('edit-mem-age').value) || 25;
+    const updatedBlood = document.getElementById('edit-mem-blood').value;
+    const updatedStatus = document.getElementById('edit-mem-status').value === 'true';
+    const updatedAddress = document.getElementById('edit-mem-address').value.trim();
+    const updatedHealth = document.getElementById('edit-mem-health').value.trim();
+
+    member.name = updatedName;
+    member.phone = updatedPhone;
+    member.age = updatedAge;
+    member.blood_group = updatedBlood;
+    member.is_active = updatedStatus;
+    member.address = updatedAddress;
+    member.health_notes = updatedHealth;
+
+    // Supabase update if online
+    if (state.user && !state.isDemoMode) {
+      try {
+        await supabase.from('members').update({
+          name: updatedName,
+          phone: updatedPhone,
+          age: updatedAge,
+          blood_group: updatedBlood,
+          address: updatedAddress
+        }).eq('id', memberId);
+      } catch (err) {
+        console.warn('Supabase member update error:', err);
+      }
+    }
+
+    computeDashboardMetrics();
+    modal.remove();
+    renderMembersView();
+    alert(`✅ Member details for "${updatedName}" updated successfully!`);
+  });
+};
+
 // ==========================================
 // VIEW 3: MEMBERS DIRECTORY
 // ==========================================
@@ -1431,14 +1799,116 @@ function renderMembersView() {
   const query = state.searchQuery.toLowerCase();
   const filtered = state.members.filter(m => {
     const matchesSearch = !query || m.name.toLowerCase().includes(query) || m.phone.includes(query);
-    return matchesSearch;
+    if (!matchesSearch) return false;
+
+    const statusObj = state.memberStatusMap[m.id] || {};
+    if (state.memberFilterTab === 'near-expiry') {
+      return statusObj.alertStatus === 'critical' || statusObj.alertStatus === 'expiring';
+    }
+    if (state.memberFilterTab === 'inactive') {
+      return statusObj.alertStatus === 'expired' || statusObj.alertStatus === 'inactive' || m.is_active === false;
+    }
+    if (state.memberFilterTab === 'new-week') {
+      if (!m.join_date) return false;
+      const jd = new Date(m.join_date);
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+      return jd >= sevenDaysAgo;
+    }
+    if (state.memberFilterTab === 'new-month') {
+      if (!m.join_date) return false;
+      const jd = new Date(m.join_date);
+      const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      return jd >= firstDay;
+    }
+    return true; // 'all'
   });
 
+  const lastBackupStr = localStorage.getItem('shape_last_weekly_backup') || 'Not taken yet';
+
   content.innerHTML = `
-    <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; width: 100%;">
-      <input type="text" id="member-search-input" class="form-input" style="flex: 1; min-width: 200px; width: 100%;" placeholder="Search by name or mobile..." value="${state.searchQuery}" />
-      <button class="btn-primary" style="flex-shrink: 0;" onclick="window.navigateTo('admission')">
-        <i data-lucide="user-plus"></i> New Member
+    <!-- Top Action Bar -->
+    <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; width: 100%; align-items: center; justify-content: space-between;">
+      <div style="flex: 1; min-width: 220px;">
+        <input type="text" id="member-search-input" class="form-input" style="width: 100%;" placeholder="Search by name or mobile..." value="${state.searchQuery}" />
+      </div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn-secondary" style="flex-shrink: 0;" onclick="window.takeWeeklyBackup()" title="Download Full Weekly Backup">
+          <i data-lucide="cloud-download"></i> Weekly Backup
+        </button>
+        <button class="btn-primary" style="flex-shrink: 0;" onclick="window.navigateTo('admission')">
+          <i data-lucide="user-plus"></i> New Member
+        </button>
+      </div>
+    </div>
+
+    <!-- TOP SECTION: Priority Action (Near Expiry & Inactive Members) -->
+    <div class="members-top-alerts">
+      <div class="members-top-alerts-header">
+        <div>
+          <div style="font-size: 15px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="alert-triangle" style="color: var(--primary); width: 18px; height: 18px;"></i>
+            <span>Attention Required: Near Expiry & Inactive Members</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            Top section summary for immediate renewals, customer edits, and follow-ups.
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <span class="alert-tag red" style="font-size: 11px;">${state.nearExpiryList.length} Near Expiry</span>
+          <span class="alert-tag expired" style="font-size: 11px;">${state.inactiveOrExpiredList.length} Inactive/Expired</span>
+        </div>
+      </div>
+
+      ${(state.nearExpiryList.length === 0 && state.inactiveOrExpiredList.length === 0) ? `
+        <div style="padding: 16px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 13px; color: var(--alert-green); display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> All members have active, healthy memberships!
+        </div>
+      ` : `
+        <div class="priority-members-list">
+          ${[...state.nearExpiryList, ...state.inactiveOrExpiredList].map(item => `
+            <div class="priority-member-card ${item.alertStatus}">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                  <div style="font-weight: 800; color: #fff; font-size: 14px;">${item.name}</div>
+                  <div style="font-size: 12px; color: var(--text-secondary);">+91 ${item.phone} • ${item.planName}</div>
+                </div>
+                <span class="alert-tag ${item.alertStatus === 'critical' ? 'red' : item.alertStatus === 'expiring' ? 'yellow' : 'expired'}" style="font-size: 10px;">
+                  ${item.alertStatus === 'expired' ? 'Expired' : item.alertStatus === 'inactive' ? 'Inactive' : `${item.daysRemaining}d left`}
+                </span>
+              </div>
+              <div style="display: flex; gap: 6px; margin-top: 4px;">
+                <button class="btn-sm btn-call" style="flex: 1; padding: 6px 8px; font-size: 11px; min-height: 32px;" onclick="window.openMemberDetailModal('${item.memberId}')">
+                  <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i> View & Edit
+                </button>
+                <button class="btn-sm btn-renew" style="flex: 1; padding: 6px 8px; font-size: 11px; min-height: 32px;" onclick="window.openRenewalModal('${item.memberId}', '${item.name}', ${item.balance}, '${item.planId}')">
+                  <i data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i> Renew
+                </button>
+                <button class="btn-sm btn-whatsapp" style="padding: 6px 10px; font-size: 11px; min-height: 32px;" onclick="window.sendWhatsAppReminder('${item.name}', '${item.phone}', '${item.planName}', '${item.endDate}', ${item.balance})">
+                  <i data-lucide="message-circle" style="width: 13px; height: 13px;"></i>
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+
+    <!-- Quick Insights & Filter Bar (This Week / Month Joinees & Status) -->
+    <div class="members-filter-bar">
+      <button class="filter-pill ${state.memberFilterTab === 'all' ? 'active' : ''}" onclick="window.setMemberFilter('all')">
+        <i data-lucide="users"></i> All Members (${state.members.length})
+      </button>
+      <button class="filter-pill ${state.memberFilterTab === 'near-expiry' ? 'active' : ''}" onclick="window.setMemberFilter('near-expiry')">
+        <i data-lucide="clock" style="color: var(--alert-yellow);"></i> Near Expiry (${state.nearExpiryList.length})
+      </button>
+      <button class="filter-pill ${state.memberFilterTab === 'inactive' ? 'active' : ''}" onclick="window.setMemberFilter('inactive')">
+        <i data-lucide="user-x" style="color: var(--alert-red);"></i> Inactive / Expired (${state.inactiveOrExpiredList.length})
+      </button>
+      <button class="filter-pill ${state.memberFilterTab === 'new-week' ? 'active' : ''}" onclick="window.setMemberFilter('new-week')">
+        <i data-lucide="sparkles" style="color: var(--primary);"></i> Joined This Week (${state.newThisWeekCount})
+      </button>
+      <button class="filter-pill ${state.memberFilterTab === 'new-month' ? 'active' : ''}" onclick="window.setMemberFilter('new-month')">
+        <i data-lucide="calendar" style="color: var(--alert-green);"></i> Joined This Month (${state.newThisMonthCount})
       </button>
     </div>
 
@@ -1451,30 +1921,69 @@ function renderMembersView() {
             <th>Phone</th>
             <th>Aadhaar</th>
             <th>Blood Group</th>
+            <th>Status & Validity</th>
             <th>Joined On</th>
-            <th>Status</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           ${filtered.length === 0 ? `
             <tr>
-              <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px;">
-                <p style="margin-bottom: 14px;">No members found.</p>
+              <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                <p style="margin-bottom: 14px;">No members found matching the selected filter.</p>
                 <button class="btn-primary" onclick="window.navigateTo('admission')">
                   <i data-lucide="user-plus"></i> Enroll New Member
                 </button>
               </td>
             </tr>
-          ` : filtered.map(m => `
-            <tr>
-              <td><strong>${m.name}</strong></td>
-              <td>+91 ${m.phone}</td>
-              <td>•••• ${m.aadhaar_last4 || '••••'}</td>
-              <td><span style="color: var(--primary); font-weight: 700;">${m.blood_group || 'N/A'}</span></td>
-              <td>${new Date(m.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-              <td><span class="user-role-badge" style="background: rgba(16, 185, 129, 0.2); color: var(--alert-green);">Active Member</span></td>
-            </tr>
-          `).join('')}
+          ` : filtered.map(m => {
+            const statusObj = state.memberStatusMap[m.id] || {};
+            let badgeClass = 'yellow';
+            let badgeText = 'Active';
+
+            if (m.is_active === false) {
+              badgeClass = 'expired';
+              badgeText = 'Inactive';
+            } else if (statusObj.alertStatus === 'expired') {
+              badgeClass = 'expired';
+              badgeText = 'Expired';
+            } else if (statusObj.alertStatus === 'critical') {
+              badgeClass = 'red';
+              badgeText = `Expiring (${statusObj.daysRemaining}d)`;
+            } else if (statusObj.alertStatus === 'expiring') {
+              badgeClass = 'yellow';
+              badgeText = `Expiring (${statusObj.daysRemaining}d)`;
+            } else {
+              badgeClass = 'yellow';
+              badgeText = 'Active';
+            }
+
+            return `
+              <tr>
+                <td>
+                  <strong>${m.name}</strong>
+                  <div style="font-size: 11px; color: var(--text-muted);">${statusObj.planName || ''}</div>
+                </td>
+                <td>+91 ${m.phone}</td>
+                <td>•••• ${m.aadhaar_last4 || '••••'}</td>
+                <td><span style="color: var(--primary); font-weight: 700;">${m.blood_group || 'N/A'}</span></td>
+                <td>
+                  <span class="alert-tag ${badgeClass}" style="font-size: 11px;">${badgeText}</span>
+                </td>
+                <td>${new Date(m.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                <td>
+                  <div style="display: flex; gap: 6px;">
+                    <button class="btn-sm btn-call" onclick="window.openMemberDetailModal('${m.id}')" title="Read & Edit Data">
+                      <i data-lucide="edit-3"></i> View & Edit
+                    </button>
+                    <button class="btn-sm btn-whatsapp" onclick="window.sendWhatsAppReminder('${m.name}', '${m.phone}', '${statusObj.planName || 'Membership'}', '${statusObj.endDate || ''}', ${statusObj.balance || 0})" title="WhatsApp">
+                      <i data-lucide="message-circle"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('')}
         </tbody>
       </table>
     </div>
@@ -1483,37 +1992,63 @@ function renderMembersView() {
     <div class="member-mobile-cards">
       ${filtered.length === 0 ? `
         <div class="metric-card" style="text-align: center; padding: 32px;">
-          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;">No members found matching search.</p>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;">No members found matching filter.</p>
           <button class="btn-primary" onclick="window.navigateTo('admission')">
             <i data-lucide="user-plus"></i> Enroll New Member
           </button>
         </div>
-      ` : filtered.map(m => `
-        <div class="member-mobile-card">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-              <div style="font-size: 16px; font-weight: 800; color: #ffffff;">${m.name}</div>
-              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">+91 ${m.phone}</div>
+      ` : filtered.map(m => {
+        const statusObj = state.memberStatusMap[m.id] || {};
+        let badgeClass = 'yellow';
+        let badgeText = 'Active';
+
+        if (m.is_active === false) {
+          badgeClass = 'expired';
+          badgeText = 'Inactive';
+        } else if (statusObj.alertStatus === 'expired') {
+          badgeClass = 'expired';
+          badgeText = 'Expired';
+        } else if (statusObj.alertStatus === 'critical') {
+          badgeClass = 'red';
+          badgeText = `Expiring (${statusObj.daysRemaining}d)`;
+        } else if (statusObj.alertStatus === 'expiring') {
+          badgeClass = 'yellow';
+          badgeText = `Expiring (${statusObj.daysRemaining}d)`;
+        } else {
+          badgeClass = 'yellow';
+          badgeText = 'Active';
+        }
+
+        return `
+          <div class="member-mobile-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <div style="font-size: 16px; font-weight: 800; color: #ffffff;">${m.name}</div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">+91 ${m.phone} • ${statusObj.planName || 'Plan'}</div>
+              </div>
+              <span class="alert-tag ${badgeClass}" style="font-size: 10px;">${badgeText}</span>
             </div>
-            <span class="alert-tag yellow" style="font-size: 10px; background: rgba(16, 185, 129, 0.15); color: var(--alert-green); border-color: rgba(16, 185, 129, 0.3);">Active</span>
-          </div>
 
-          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 8px;">
-            <span>Aadhaar: •••• ${m.aadhaar_last4 || '••••'}</span>
-            <span>Blood: <strong style="color: var(--primary);">${m.blood_group || 'N/A'}</strong></span>
-            <span>Joined: ${new Date(m.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
-          </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 8px;">
+              <span>Aadhaar: •••• ${m.aadhaar_last4 || '••••'}</span>
+              <span>Blood: <strong style="color: var(--primary);">${m.blood_group || 'N/A'}</strong></span>
+              <span>Joined: ${new Date(m.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+            </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
-            <a href="tel:+91${m.phone}" class="btn-sm btn-call" style="justify-content: center;">
-              <i data-lucide="phone"></i> Call
-            </a>
-            <button class="btn-sm btn-whatsapp" style="justify-content: center;" onclick="window.sendWhatsAppReminder('${m.name}', '${m.phone}', 'Membership', '${new Date().toISOString()}', 0)">
-              <i data-lucide="message-circle"></i> WhatsApp
-            </button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 6px;">
+              <button class="btn-sm btn-call" style="justify-content: center;" onclick="window.openMemberDetailModal('${m.id}')">
+                <i data-lucide="edit-3"></i> Edit
+              </button>
+              <a href="tel:+91${m.phone}" class="btn-sm btn-call" style="justify-content: center;">
+                <i data-lucide="phone"></i> Call
+              </a>
+              <button class="btn-sm btn-whatsapp" style="justify-content: center;" onclick="window.sendWhatsAppReminder('${m.name}', '${m.phone}', '${statusObj.planName || 'Membership'}', '${statusObj.endDate || ''}', ${statusObj.balance || 0})">
+                <i data-lucide="message-circle"></i> WhatsApp
+              </button>
+            </div>
           </div>
-        </div>
-      `).join('')}
+        `;
+      }).join('')}
     </div>
   `;
 

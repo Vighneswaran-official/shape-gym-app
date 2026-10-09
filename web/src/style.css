@@ -1239,3 +1239,95 @@ body {
     padding: 14px 10px 88px 10px !important; /* Extra bottom padding so mobile bottom-nav never overlaps buttons */
   }
 }
+
+/* Priority Alerts Section at Top of Members Directory */
+.members-top-alerts {
+  background: linear-gradient(135deg, rgba(255, 102, 0, 0.08) 0%, rgba(18, 19, 26, 0.95) 100%);
+  border: 1px solid rgba(255, 102, 0, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+
+.members-top-alerts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.priority-members-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px;
+}
+
+.priority-member-card {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.priority-member-card.critical {
+  border-left: 4px solid var(--alert-red);
+}
+
+.priority-member-card.expiring {
+  border-left: 4px solid var(--alert-yellow);
+}
+
+.priority-member-card.inactive {
+  border-left: 4px solid #888888;
+  opacity: 0.9;
+}
+
+/* Filter Pills Bar for Members */
+.members-filter-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-pill {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.filter-pill:hover {
+  border-color: var(--border-medium);
+  color: var(--text-main);
+}
+
+.filter-pill.active {
+  background: rgba(255, 102, 0, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 10px rgba(255, 102, 0, 0.3);
+}
+
+.modal-card-lg {
+  max-width: 640px !important;
+}
