@@ -530,18 +530,34 @@ function renderAppShell() {
       <!-- Main Layout -->
       <div class="main-wrapper">
         <header class="top-bar">
+          <!-- Mobile Brand Logo -->
+          <div class="top-bar-mobile-brand">
+            <div class="brand-icon">
+              <i data-lucide="dumbbell"></i>
+            </div>
+            <div>
+              <div class="brand-name">SHAPE</div>
+              <div class="brand-sub">FITNESS</div>
+            </div>
+          </div>
+
           <div style="display: flex; align-items: center; gap: 12px;">
             <h2 id="page-title" style="font-size: 20px;">Gym Operations</h2>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
             <div class="status-chip">
-              <span class="status-dot" style="${state.isDemoMode ? 'background: #e2fd5a;' : ''}"></span>
-              ${state.isDemoMode ? 'Interactive Demo Mode' : 'Supabase Live Connected'}
+              <span class="status-dot" style="${state.isDemoMode ? 'background: var(--primary); box-shadow: 0 0 10px var(--primary);' : ''}"></span>
+              <span>${state.isDemoMode ? 'Demo' : 'Online'}</span>
             </div>
 
             <button class="btn-primary" style="padding: 8px 16px; font-size: 13px;" id="quick-admission-btn">
               <i data-lucide="plus"></i> Add Member
+            </button>
+
+            <!-- Mobile Sign Out Button -->
+            <button id="mobile-logout-btn" title="Sign Out" style="background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-subtle); color: var(--text-secondary); width: 38px; height: 38px; border-radius: 50%; display: none; align-items: center; justify-content: center; cursor: pointer;">
+              <i data-lucide="log-out" style="width: 17px; height: 17px;"></i>
             </button>
           </div>
         </header>
@@ -549,20 +565,37 @@ function renderAppShell() {
         <main id="main-content" class="content-area"></main>
       </div>
 
-      <!-- Mobile Bottom Navigation -->
-      <nav class="mobile-bottom-nav" style="display: none;">
-        <div class="nav-item ${state.currentTab === 'dashboard' ? 'active' : ''}" data-tab="dashboard"><i data-lucide="layout-dashboard"></i></div>
-        <div class="nav-item ${state.currentTab === 'members' ? 'active' : ''}" data-tab="members"><i data-lucide="users"></i></div>
-        <div class="nav-item ${state.currentTab === 'admission' ? 'active' : ''}" data-tab="admission"><i data-lucide="user-plus"></i></div>
-        <div class="nav-item ${state.currentTab === 'accounts' ? 'active' : ''}" data-tab="accounts"><i data-lucide="pie-chart"></i></div>
-        <div class="nav-item ${state.currentTab === 'settings' ? 'active' : ''}" data-tab="settings"><i data-lucide="settings"></i></div>
+      <!-- Mobile Bottom Navigation (Ultra-responsive 5-tab with floating FAB) -->
+      <nav class="mobile-bottom-nav">
+        <button class="mobile-nav-item ${state.currentTab === 'dashboard' ? 'active' : ''}" data-tab="dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Home</span>
+        </button>
+        <button class="mobile-nav-item ${state.currentTab === 'members' ? 'active' : ''}" data-tab="members">
+          <i data-lucide="users"></i>
+          <span>Members</span>
+        </button>
+        <button class="mobile-nav-fab ${state.currentTab === 'admission' ? 'active' : ''}" data-tab="admission" title="New Admission">
+          <div class="fab-circle">
+            <i data-lucide="user-plus"></i>
+          </div>
+          <span>Admission</span>
+        </button>
+        <button class="mobile-nav-item ${state.currentTab === 'plans' ? 'active' : ''}" data-tab="plans">
+          <i data-lucide="dumbbell"></i>
+          <span>Plans</span>
+        </button>
+        <button class="mobile-nav-item ${state.currentTab === 'accounts' ? 'active' : ''}" data-tab="accounts">
+          <i data-lucide="pie-chart"></i>
+          <span>Accounts</span>
+        </button>
       </nav>
     </div>
   `;
 
   lucide.createIcons();
 
-  // Navigation handlers
+  // Navigation handlers (works for both desktop sidebar and mobile bottom nav)
   document.querySelectorAll('[data-tab]').forEach(el => {
     el.addEventListener('click', () => {
       state.currentTab = el.getAttribute('data-tab');
@@ -570,11 +603,15 @@ function renderAppShell() {
     });
   });
 
-  document.getElementById('logout-btn')?.addEventListener('click', async () => {
+  const handleLogout = async () => {
     await supabase.auth.signOut();
     state.user = null;
+    state.isDemoMode = false;
     renderLoginScreen();
-  });
+  };
+
+  document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+  document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
 
   document.getElementById('quick-admission-btn')?.addEventListener('click', () => {
     state.currentTab = 'admission';
@@ -754,10 +791,11 @@ window.openRenewalModal = (memberId, memberName, carriedBalance, planId) => {
 
   modal.innerHTML = `
     <div class="modal-card">
+      <div class="modal-sheet-handle"></div>
       <div class="modal-header">
         <div>
           <h2>Renew Membership</h2>
-          <p style="color: var(--primary); font-size: 13px; font-weight: 600; margin-top: 4px;">${memberName}</p>
+          <p style="color: var(--primary); font-size: 13px; font-weight: 700; margin-top: 4px;">${memberName}</p>
         </div>
         <button class="close-btn" onclick="document.getElementById('renewal-modal').remove()">
           <i data-lucide="x"></i>
@@ -795,9 +833,9 @@ window.openRenewalModal = (memberId, memberName, carriedBalance, planId) => {
         </select>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
-        <button class="btn-secondary" onclick="document.getElementById('renewal-modal').remove()">Cancel</button>
-        <button class="btn-primary" id="confirm-renew-btn">Confirm Renewal</button>
+      <div style="display: flex; gap: 10px; margin-top: 24px;">
+        <button class="btn-secondary" style="flex: 1; justify-content: center;" onclick="document.getElementById('renewal-modal').remove()">Cancel</button>
+        <button class="btn-primary" style="flex: 1.5; justify-content: center;" id="confirm-renew-btn">Confirm Renewal</button>
       </div>
     </div>
   `;
@@ -1267,8 +1305,17 @@ function renderAdmissionView() {
 function setupSignatureCanvas(canvasId, type) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+
+  // Auto-fit canvas to element width and handle Retina/High-DPI mobile screens
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const displayWidth = rect.width > 50 ? rect.width : 360;
+  canvas.width = displayWidth * dpr;
+  canvas.height = 150 * dpr;
+
   const ctx = canvas.getContext('2d');
-  ctx.strokeStyle = '#ffffff';
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#ccff00'; /* Electric Volt Lime signature ink */
   ctx.lineWidth = 3;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -1276,12 +1323,12 @@ function setupSignatureCanvas(canvasId, type) {
   let drawing = false;
 
   const getPos = (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const r = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return {
-      x: ((e.clientX || e.touches[0].clientX) - rect.left) * scaleX,
-      y: ((e.clientY || e.touches[0].clientY) - rect.top) * scaleY
+      x: clientX - r.left,
+      y: clientY - r.top
     };
   };
 
@@ -1291,7 +1338,7 @@ function setupSignatureCanvas(canvasId, type) {
     ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
     state.activeCanvasStrokes[type].push(pos);
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
   };
 
   const draw = (e) => {
@@ -1300,7 +1347,7 @@ function setupSignatureCanvas(canvasId, type) {
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
     state.activeCanvasStrokes[type].push(pos);
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
   };
 
   const stop = () => {
@@ -1311,8 +1358,9 @@ function setupSignatureCanvas(canvasId, type) {
   canvas.addEventListener('mousemove', draw);
   window.addEventListener('mouseup', stop);
 
-  canvas.addEventListener('touchstart', start);
-  canvas.addEventListener('touchmove', draw);
+  // Touch events with passive: false to prevent scrolling while drawing signature
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
   window.addEventListener('touchend', stop);
 }
 
