@@ -34,7 +34,7 @@ export function generateReceiptPdf({
   });
 
   // 1. Header Banner
-  doc.setFillColor(255, 87, 34); // Shape Flame Orange
+  doc.setFillColor(255, 102, 0); // Shape Athletic Orange
   doc.rect(0, 0, 210, 32, 'F');
 
   doc.setTextColor(255, 255, 255);

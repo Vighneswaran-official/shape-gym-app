@@ -1,58 +1,59 @@
 /* ==========================================================================
-   SHAPE GYM MANAGEMENT - PREMIUM ATHLETIC DARK DESIGN SYSTEM
+   SHAPE GYM MANAGEMENT - PREMIUM ORANGE & BLACK ATHLETIC SYSTEM
    ========================================================================== */
 
 :root {
-  /* Gym Aesthetic Palette */
-  --bg-primary: #08090d;
-  --bg-surface: #10121a;
-  --bg-card: rgba(18, 22, 31, 0.85);
-  --bg-card-hover: rgba(26, 32, 45, 0.95);
-  --bg-elevated: #1e2433;
-  --bg-glass: rgba(16, 18, 26, 0.75);
-  
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.15);
-  --border-volt: rgba(204, 255, 0, 0.35);
-  --border-focus: #ccff00;
-  
-  /* Signature Gym Athletic Colors */
-  --primary: #ccff00;                /* Electric Volt Lime */
-  --primary-hover: #b8e600;
-  --primary-glow: rgba(204, 255, 0, 0.3);
-  --primary-gradient: linear-gradient(135deg, #ccff00 0%, #99cc00 100%);
-  --primary-dark: #0f1400;
-  
-  --accent-blaze: #ff462d;             /* Fire Crimson / High Energy */
-  --accent-orange: #ff7033;
-  --accent-cyan: #00f0ff;              /* Performance Cyan */
-  --accent-gold: #ffb800;              /* Champion Gold */
-  
-  /* Text */
-  --text-main: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  /* True Deep Black Gym Background */
+  --bg-primary: #000000;
+  --bg-surface: #0a0b0f;
+  --bg-card: rgba(14, 16, 22, 0.92);
+  --bg-card-hover: rgba(22, 25, 34, 0.96);
+  --bg-elevated: #161922;
+  --bg-glass: rgba(10, 11, 15, 0.85);
+
+  --border-subtle: rgba(255, 255, 255, 0.09);
+  --border-medium: rgba(255, 255, 255, 0.18);
+  --border-orange: rgba(255, 102, 0, 0.35);
+  --border-focus: #ff6600;
+
+  /* SIGNATURE ATHLETIC ORANGE PALETTE */
+  --primary: #ff6600;                  /* Vivid Athletic Orange */
+  --primary-hover: #ff771a;
+  --primary-active: #e65c00;
+  --primary-glow: rgba(255, 102, 0, 0.4);
+  --primary-gradient: linear-gradient(135deg, #ff6600 0%, #ff3d00 100%);
+  --primary-dark: #240e00;
+
+  --accent-blaze: #ff334b;              /* Critical Alert Crimson */
+  --accent-amber: #ffaa00;              /* Warning Yellow/Amber */
+  --accent-green: #10b981;              /* Success / Revenue Green */
+  --accent-cyan: #00d2ff;
+
+  /* High Contrast Typography */
+  --text-main: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
   --text-dark: #000000;
-  
+
   /* Status Colors */
   --alert-green: #10b981;
   --alert-yellow: #f59e0b;
-  --alert-red: #ff3b30;
-  --alert-expired: #841818;
-  
+  --alert-red: #ff334b;
+  --alert-expired: #8f1d1d;
+
   /* Radii */
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
   --radius-xl: 28px;
   --radius-full: 9999px;
-  
+
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.7);
-  --shadow-glow: 0 0 25px rgba(204, 255, 0, 0.25);
-  --shadow-blaze: 0 0 25px rgba(255, 70, 45, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.85);
+  --shadow-glow: 0 0 25px rgba(255, 102, 0, 0.35);
+  --shadow-orange-fab: 0 4px 20px rgba(255, 102, 0, 0.55);
 }
 
 * {
@@ -65,13 +66,13 @@
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--bg-primary);
-  /* Gym Atmosphere Background Mesh */
+  /* Stealth Black Atmosphere with Athletic Orange Ambient Glow */
   background-image: 
-    radial-gradient(circle at 10% 15%, rgba(204, 255, 0, 0.06) 0%, transparent 40%),
-    radial-gradient(circle at 90% 85%, rgba(255, 70, 45, 0.05) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.02) 0%, transparent 60%),
-    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    radial-gradient(circle at 12% 15%, rgba(255, 102, 0, 0.09) 0%, transparent 40%),
+    radial-gradient(circle at 88% 85%, rgba(255, 61, 0, 0.07) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(255, 102, 0, 0.02) 0%, transparent 60%),
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 100% 100%, 32px 32px, 32px 32px;
   color: var(--text-main);
   min-height: 100vh;
@@ -86,7 +87,7 @@ h1, h2, h3, h4, .brand-title {
 }
 
 /* ==========================================
-   APP LAYOUT (DESKTOP + MOBILE)
+   APP CONTAINER & DESKTOP SIDEBAR
    ========================================== */
 
 .app-container {
@@ -94,7 +95,6 @@ h1, h2, h3, h4, .brand-title {
   min-height: 100vh;
 }
 
-/* Sidebar (Desktop) */
 .sidebar {
   width: 260px;
   background: var(--bg-surface);
@@ -126,7 +126,7 @@ h1, h2, h3, h4, .brand-title {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #000;
+  color: #ffffff;
   box-shadow: 0 0 20px var(--primary-glow);
   flex-shrink: 0;
 }
@@ -177,10 +177,10 @@ h1, h2, h3, h4, .brand-title {
 }
 
 .nav-item.active {
-  background: rgba(204, 255, 0, 0.1);
+  background: rgba(255, 102, 0, 0.12);
   color: var(--primary);
-  border-color: var(--border-volt);
-  box-shadow: inset 0 0 12px rgba(204, 255, 0, 0.08);
+  border-color: var(--border-orange);
+  box-shadow: inset 0 0 12px rgba(255, 102, 0, 0.1);
 }
 
 .sidebar-footer {
@@ -203,13 +203,14 @@ h1, h2, h3, h4, .brand-title {
   height: 38px;
   border-radius: 50%;
   background: var(--primary-gradient);
-  color: #000;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 14px;
   flex-shrink: 0;
+  box-shadow: 0 0 10px var(--primary-glow);
 }
 
 .user-meta {
@@ -231,7 +232,7 @@ h1, h2, h3, h4, .brand-title {
   font-size: 9px;
   font-weight: 800;
   text-transform: uppercase;
-  color: #000;
+  color: #ffffff;
   background: var(--primary);
   padding: 2px 6px;
   border-radius: 4px;
@@ -251,7 +252,7 @@ h1, h2, h3, h4, .brand-title {
 }
 
 .top-bar {
-  background: rgba(16, 18, 26, 0.85);
+  background: rgba(10, 11, 15, 0.88);
   border-bottom: 1px solid var(--border-subtle);
   padding: 14px 28px;
   display: flex;
@@ -270,9 +271,9 @@ h1, h2, h3, h4, .brand-title {
 }
 
 .top-bar-mobile-brand .brand-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
 }
 
 .top-bar-mobile-brand .brand-name {
@@ -284,8 +285,8 @@ h1, h2, h3, h4, .brand-title {
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background: rgba(204, 255, 0, 0.08);
-  border: 1px solid var(--border-volt);
+  background: rgba(255, 102, 0, 0.08);
+  border: 1px solid var(--border-orange);
   border-radius: 20px;
   font-size: 12px;
   font-weight: 700;
@@ -346,7 +347,7 @@ h1, h2, h3, h4, .brand-title {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(204, 255, 0, 0.3), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 102, 0, 0.4), transparent);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -420,6 +421,7 @@ h1, h2, h3, h4, .brand-title {
   gap: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: #ffffff;
 }
 
 .renewals-grid {
@@ -454,13 +456,13 @@ h1, h2, h3, h4, .brand-title {
 
 .renewal-card.red-alert {
   border-left: 5px solid var(--alert-red);
-  background: linear-gradient(135deg, rgba(255, 59, 48, 0.08) 0%, rgba(18, 22, 31, 0.85) 100%);
-  border-color: rgba(255, 59, 48, 0.3);
+  background: linear-gradient(135deg, rgba(255, 51, 75, 0.1) 0%, rgba(14, 16, 22, 0.92) 100%);
+  border-color: rgba(255, 51, 75, 0.35);
 }
 
 .renewal-card.expired-alert {
   border-left: 5px solid #ff1a1a;
-  background: linear-gradient(135deg, rgba(132, 24, 24, 0.25) 0%, rgba(18, 22, 31, 0.85) 100%);
+  background: linear-gradient(135deg, rgba(143, 29, 29, 0.25) 0%, rgba(14, 16, 22, 0.92) 100%);
   border-color: rgba(255, 26, 26, 0.4);
 }
 
@@ -502,22 +504,22 @@ h1, h2, h3, h4, .brand-title {
 }
 
 .alert-tag.red {
-  background: rgba(255, 59, 48, 0.2);
+  background: rgba(255, 51, 75, 0.2);
   color: var(--alert-red);
-  border: 1px solid rgba(255, 59, 48, 0.4);
+  border: 1px solid rgba(255, 51, 75, 0.4);
   animation: pulse-red 2s infinite;
 }
 
 .alert-tag.expired {
-  background: rgba(132, 24, 24, 0.4);
+  background: rgba(143, 29, 29, 0.4);
   color: #ff6b6b;
   border: 1px solid rgba(255, 107, 107, 0.3);
 }
 
 @keyframes pulse-red {
-  0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(255, 51, 75, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(255, 51, 75, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 51, 75, 0); }
 }
 
 .renewal-meta-row {
@@ -574,12 +576,12 @@ h1, h2, h3, h4, .brand-title {
 
 .btn-renew {
   background: var(--primary-gradient);
-  color: #000;
+  color: #ffffff;
   font-weight: 800;
-  box-shadow: 0 0 15px rgba(204, 255, 0, 0.3);
+  box-shadow: 0 0 15px var(--primary-glow);
 }
 .btn-renew:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.12);
   transform: translateY(-1px);
 }
 
@@ -589,7 +591,7 @@ h1, h2, h3, h4, .brand-title {
 
 .btn-primary {
   background: var(--primary-gradient);
-  color: #000;
+  color: #ffffff;
   border: none;
   border-radius: var(--radius-md);
   padding: 13px 24px;
@@ -606,9 +608,9 @@ h1, h2, h3, h4, .brand-title {
 }
 
 .btn-primary:hover {
-  filter: brightness(1.12);
+  filter: brightness(1.15);
   transform: translateY(-1px);
-  box-shadow: 0 0 30px rgba(204, 255, 0, 0.45);
+  box-shadow: 0 0 30px rgba(255, 102, 0, 0.5);
 }
 
 .btn-primary:active {
@@ -637,9 +639,9 @@ h1, h2, h3, h4, .brand-title {
 }
 
 .btn-danger {
-  background: rgba(255, 59, 48, 0.15);
+  background: rgba(255, 51, 75, 0.15);
   color: var(--alert-red);
-  border: 1px solid rgba(255, 59, 48, 0.3);
+  border: 1px solid rgba(255, 51, 75, 0.3);
   border-radius: var(--radius-md);
   padding: 13px 20px;
   font-size: 14px;
@@ -684,7 +686,7 @@ h1, h2, h3, h4, .brand-title {
 }
 
 .form-input, .form-select, .form-textarea {
-  background: #0b0d13;
+  background: #06070a;
   border: 1.5px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 13px 16px;
@@ -699,7 +701,7 @@ h1, h2, h3, h4, .brand-title {
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 15px var(--primary-glow);
-  background: #0f121b;
+  background: #0d0e14;
 }
 
 .form-textarea {
@@ -709,13 +711,13 @@ h1, h2, h3, h4, .brand-title {
 
 /* Dual Signature Pads */
 .signature-box {
-  background: #06070a;
-  border: 1.5px dashed var(--border-volt);
+  background: #040508;
+  border: 1.5px dashed var(--border-orange);
   border-radius: var(--radius-md);
   position: relative;
   margin-top: 6px;
   overflow: hidden;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
 }
 
 .signature-canvas {
@@ -732,15 +734,7 @@ h1, h2, h3, h4, .brand-title {
   align-items: center;
   padding: 8px 12px;
   border-top: 1px solid var(--border-subtle);
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.signature-hint {
-  font-size: 11px;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  background: rgba(0, 0, 0, 0.5);
 }
 
 /* Interactive Program Chips */
@@ -769,10 +763,10 @@ h1, h2, h3, h4, .brand-title {
 }
 
 .chip.active {
-  background: rgba(204, 255, 0, 0.15);
+  background: rgba(255, 102, 0, 0.15);
   border-color: var(--primary);
   color: var(--primary);
-  box-shadow: 0 0 12px rgba(204, 255, 0, 0.2);
+  box-shadow: 0 0 12px rgba(255, 102, 0, 0.25);
 }
 
 /* Data Table */
@@ -808,15 +802,15 @@ h1, h2, h3, h4, .brand-title {
 }
 
 .data-table tr:hover {
-  background: rgba(204, 255, 0, 0.02);
+  background: rgba(255, 102, 0, 0.02);
 }
 
 /* Modals & Bottom Sheets */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -866,24 +860,20 @@ h1, h2, h3, h4, .brand-title {
    MOBILE-FIRST NAVIGATION & ULTRA-SMOOTH RESPONSIVE STYLES (≤ 900px)
    ========================================================================== */
 
-/* Hidden on desktop */
 .mobile-bottom-nav {
   display: none;
 }
 
 @media (max-width: 900px) {
-  /* Hide desktop sidebar */
   .sidebar {
     display: none !important;
   }
 
-  /* Full width main wrapper with bottom clearance for nav */
   .main-wrapper {
     margin-left: 0;
     padding-bottom: 95px; /* Clearance for floating bottom nav */
   }
 
-  /* Compact Top Bar */
   .top-bar {
     padding: 12px 18px;
   }
@@ -940,7 +930,7 @@ h1, h2, h3, h4, .brand-title {
   }
 
   .metric-subtitle {
-    display: none; /* Clean uncluttered mobile stat */
+    display: none;
   }
 
   /* Renewal Cards on Mobile */
@@ -979,7 +969,7 @@ h1, h2, h3, h4, .brand-title {
   /* Mobile Bottom Sheet for Modals */
   .modal-overlay {
     padding: 0;
-    align-items: flex-end; /* Align to bottom for native bottom sheet */
+    align-items: flex-end; /* Slide up from bottom */
   }
 
   .modal-card {
@@ -1014,12 +1004,12 @@ h1, h2, h3, h4, .brand-title {
     left: 0;
     right: 0;
     height: 72px;
-    background: rgba(10, 12, 17, 0.94);
+    background: rgba(8, 9, 13, 0.95);
     border-top: 1px solid var(--border-medium);
     padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px)) 8px;
     backdrop-filter: blur(24px);
     z-index: 90;
-    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.7);
   }
 
   .mobile-nav-item {
@@ -1055,7 +1045,7 @@ h1, h2, h3, h4, .brand-title {
     filter: drop-shadow(0 0 6px var(--primary));
   }
 
-  /* Center Floating Action Button (FAB) */
+  /* Center Floating Action Button (FAB) in Athletic Orange */
   .mobile-nav-fab {
     display: flex;
     flex-direction: column;
@@ -1072,11 +1062,11 @@ h1, h2, h3, h4, .brand-title {
     height: 52px;
     border-radius: 50%;
     background: var(--primary-gradient);
-    color: #000;
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 20px var(--primary-glow);
+    box-shadow: var(--shadow-orange-fab);
     transform: translateY(-16px);
     border: 3px solid var(--bg-primary);
     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s;

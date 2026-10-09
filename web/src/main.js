@@ -349,25 +349,25 @@ function renderLoginScreen() {
 
   function updateLoginUi() {
     app.innerHTML = `
-      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: radial-gradient(circle at center, #1a1e29 0%, #0d0f14 100%);">
-        <div class="modal-card" style="max-width: 440px; border-color: var(--border-subtle); box-shadow: var(--shadow-glow);">
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: radial-gradient(circle at center, rgba(255, 102, 0, 0.1) 0%, #000000 100%);">
+        <div class="modal-card" style="max-width: 440px; background: #0a0b0f; border-color: var(--border-orange); box-shadow: var(--shadow-glow);">
           <div style="text-align: center; margin-bottom: 24px;">
-            <div class="brand-icon" style="width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 16px;">
-              <i data-lucide="dumbbell" style="width: 32px; height: 32px;"></i>
+            <div class="brand-icon" style="width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 16px; box-shadow: 0 0 25px rgba(255, 102, 0, 0.45);">
+              <i data-lucide="dumbbell" style="width: 34px; height: 34px; color: #ffffff;"></i>
             </div>
-            <h1 style="font-size: 32px; letter-spacing: 2px;">SHAPE</h1>
-            <p style="color: var(--primary); font-weight: 700; font-size: 11px; letter-spacing: 2px; margin-top: 4px;">GYM MANAGEMENT SYSTEM</p>
+            <h1 style="font-size: 32px; letter-spacing: 2px; color: #ffffff;">SHAPE</h1>
+            <p style="color: var(--primary); font-weight: 800; font-size: 11px; letter-spacing: 2.5px; margin-top: 4px;">FITNESS CLUB &bull; GYM MANAGEMENT</p>
           </div>
 
           <!-- Instant 1-Click Demo Button -->
-          <div style="margin-bottom: 24px; padding: 14px; background: rgba(226, 253, 90, 0.08); border: 1px solid var(--primary); border-radius: 12px; text-align: center;">
-            <div style="font-size: 12px; color: var(--primary); font-weight: 700; margin-bottom: 8px;">
+          <div style="margin-bottom: 24px; padding: 14px; background: rgba(255, 102, 0, 0.1); border: 1.5px solid var(--primary); border-radius: 14px; text-align: center;">
+            <div style="font-size: 12px; color: var(--primary); font-weight: 800; margin-bottom: 8px; letter-spacing: 0.5px;">
               ⚡ TEST THE LIVE APP IMMEDIATELY
             </div>
-            <button id="quick-demo-btn" class="btn-primary" style="width: 100%; justify-content: center; font-weight: 700; box-shadow: 0 0 20px rgba(226, 253, 90, 0.4);">
+            <button id="quick-demo-btn" class="btn-primary" style="width: 100%; justify-content: center; font-weight: 800; font-size: 15px; box-shadow: 0 0 25px rgba(255, 102, 0, 0.5);">
               <i data-lucide="play-circle"></i> Launch App (Instant Access)
             </button>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
               No password needed &bull; Pre-loaded with members & alerts
             </div>
           </div>
@@ -1315,7 +1315,7 @@ function setupSignatureCanvas(canvasId, type) {
 
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  ctx.strokeStyle = '#ccff00'; /* Electric Volt Lime signature ink */
+  ctx.strokeStyle = '#ff6600'; /* Vivid Athletic Orange signature ink */
   ctx.lineWidth = 3;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
