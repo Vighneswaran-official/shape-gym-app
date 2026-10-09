@@ -599,6 +599,7 @@ function renderAppShell() {
   document.querySelectorAll('[data-tab]').forEach(el => {
     el.addEventListener('click', () => {
       state.currentTab = el.getAttribute('data-tab');
+      window.scrollTo(0, 0);
       renderAppShell();
     });
   });
@@ -1390,14 +1391,15 @@ function renderMembersView() {
   });
 
   content.innerHTML = `
-    <div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
-      <input type="text" id="member-search-input" class="form-input" style="flex: 1; min-width: 280px;" placeholder="Search member by name or 10-digit mobile..." value="${state.searchQuery}" />
-      <button class="btn-primary" onclick="state.currentTab = 'admission'; renderAppShell();">
-        <i data-lucide="user-plus"></i> Add New Member
+    <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; width: 100%;">
+      <input type="text" id="member-search-input" class="form-input" style="flex: 1; min-width: 200px; width: 100%;" placeholder="Search by name or mobile..." value="${state.searchQuery}" />
+      <button class="btn-primary" style="flex-shrink: 0;" onclick="state.currentTab = 'admission'; window.scrollTo(0,0); renderAppShell();">
+        <i data-lucide="user-plus"></i> New Member
       </button>
     </div>
 
-    <div class="data-table-container">
+    <!-- Desktop Table View -->
+    <div class="data-table-container desktop-table-view">
       <table class="data-table">
         <thead>
           <tr>
@@ -1417,13 +1419,47 @@ function renderMembersView() {
               <td><strong>${m.name}</strong></td>
               <td>+91 ${m.phone}</td>
               <td>•••• ${m.aadhaar_last4 || '••••'}</td>
-              <td><span style="color: var(--alert-green); font-weight: 700;">${m.blood_group || 'N/A'}</span></td>
+              <td><span style="color: var(--primary); font-weight: 700;">${m.blood_group || 'N/A'}</span></td>
               <td>${new Date(m.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-              <td><span class="user-role-badge" style="background: rgba(34, 197, 94, 0.2); color: var(--alert-green);">Active Member</span></td>
+              <td><span class="user-role-badge" style="background: rgba(16, 185, 129, 0.2); color: var(--alert-green);">Active Member</span></td>
             </tr>
           `).join('')}
         </tbody>
       </table>
+    </div>
+
+    <!-- Mobile Responsive Member Cards (100% Phone Auto-fit) -->
+    <div class="member-mobile-cards">
+      ${filtered.length === 0 ? `
+        <div class="metric-card" style="text-align: center; padding: 32px;">
+          <p style="color: var(--text-muted); font-size: 13px;">No members found matching search.</p>
+        </div>
+      ` : filtered.map(m => `
+        <div class="member-mobile-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-size: 16px; font-weight: 800; color: #ffffff;">${m.name}</div>
+              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">+91 ${m.phone}</div>
+            </div>
+            <span class="alert-tag yellow" style="font-size: 10px; background: rgba(16, 185, 129, 0.15); color: var(--alert-green); border-color: rgba(16, 185, 129, 0.3);">Active</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 8px;">
+            <span>Aadhaar: •••• ${m.aadhaar_last4 || '••••'}</span>
+            <span>Blood: <strong style="color: var(--primary);">${m.blood_group || 'N/A'}</strong></span>
+            <span>Joined: ${new Date(m.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+            <a href="tel:+91${m.phone}" class="btn-sm btn-call" style="justify-content: center;">
+              <i data-lucide="phone"></i> Call
+            </a>
+            <button class="btn-sm btn-whatsapp" style="justify-content: center;" onclick="window.sendWhatsAppReminder('${m.name}', '${m.phone}', 'Membership', '${new Date().toISOString()}', 0)">
+              <i data-lucide="message-circle"></i> WhatsApp
+            </button>
+          </div>
+        </div>
+      `).join('')}
     </div>
   `;
 
@@ -1600,15 +1636,16 @@ function renderAccountsView() {
     </div>
 
     <!-- Actions Bar -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; width: 100%;">
       <h3 style="font-size: 18px;">Recent Payments & Ledger</h3>
-      <div style="display: flex; gap: 10px;">
-        <button class="btn-secondary" onclick="window.recordExpenseModal()"><i data-lucide="plus"></i> Add Expense</button>
-        <button class="btn-primary" onclick="window.exportCsv()"><i data-lucide="download"></i> Export CSV Report</button>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; max-width: 360px;">
+        <button class="btn-secondary" style="flex: 1;" onclick="window.recordExpenseModal()"><i data-lucide="plus"></i> Add Expense</button>
+        <button class="btn-primary" style="flex: 1;" onclick="window.exportCsv()"><i data-lucide="download"></i> Export CSV</button>
       </div>
     </div>
 
-    <div class="data-table-container">
+    <!-- Desktop Table View -->
+    <div class="data-table-container desktop-table-view">
       <table class="data-table">
         <thead>
           <tr>
@@ -1622,7 +1659,7 @@ function renderAccountsView() {
         <tbody>
           ${state.payments.slice(0, 15).map(p => `
             <tr>
-              <td>${new Date(p.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+              <td>${new Date(p.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
               <td><span class="alert-tag yellow" style="font-size: 10px;">${p.type}</span></td>
               <td><strong style="color: var(--alert-green);">${formatInr(p.amount)}</strong></td>
               <td>${p.mode}</td>
@@ -1631,6 +1668,28 @@ function renderAccountsView() {
           `).join('')}
         </tbody>
       </table>
+    </div>
+
+    <!-- Mobile Transaction Cards (100% Phone Auto-fit) -->
+    <div class="transaction-mobile-cards">
+      ${state.payments.length === 0 ? `
+        <div class="metric-card" style="text-align: center; padding: 32px;">
+          <p style="color: var(--text-muted); font-size: 13px;">No transactions recorded yet.</p>
+        </div>
+      ` : state.payments.slice(0, 15).map(p => `
+        <div class="transaction-mobile-card">
+          <div>
+            <div style="font-size: 14px; font-weight: 800; color: #ffffff;">${p.note || 'Membership payment'}</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">
+              ${new Date(p.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} &bull; <span style="text-transform: uppercase;">${p.mode}</span>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 16px; font-weight: 800; color: var(--alert-green);">${formatInr(p.amount)}</div>
+            <span class="alert-tag yellow" style="font-size: 9px; padding: 2px 6px; margin-top: 4px; display: inline-block;">Received</span>
+          </div>
+        </div>
+      `).join('')}
     </div>
   `;
 
