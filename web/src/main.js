@@ -271,6 +271,7 @@ function loadDemoData() {
       name: 'Rahul Sharma',
       phone: '9876543210',
       address: 'Indiranagar 100ft Rd, Bengaluru',
+      aadhaar: '5678 1234 4821',
       aadhaar_last4: '4821',
       blood_group: 'B+',
       age: 28,
@@ -284,6 +285,7 @@ function loadDemoData() {
       name: 'Priya Sundaram',
       phone: '9845012345',
       address: 'Koramangala 4th Block, Bengaluru',
+      aadhaar: '6789 2345 7190',
       aadhaar_last4: '7190',
       blood_group: 'O+',
       age: 25,
@@ -297,6 +299,7 @@ function loadDemoData() {
       name: 'Vikram Malhotra',
       phone: '9988776655',
       address: 'HSR Layout Sector 2, Bengaluru',
+      aadhaar: '7890 3456 3312',
       aadhaar_last4: '3312',
       blood_group: 'A+',
       age: 34,
@@ -310,6 +313,7 @@ function loadDemoData() {
       name: 'Ananya Deshmukh',
       phone: '9765432109',
       address: 'Whitefield Main Rd, Bengaluru',
+      aadhaar: '8901 4567 8834',
       aadhaar_last4: '8834',
       blood_group: 'AB+',
       age: 22,
@@ -323,6 +327,7 @@ function loadDemoData() {
       name: 'Karthik Raja',
       phone: '9123456780',
       address: 'JP Nagar 6th Phase, Bengaluru',
+      aadhaar: '9012 5678 5501',
       aadhaar_last4: '5501',
       blood_group: 'O-',
       age: 31,
@@ -336,6 +341,7 @@ function loadDemoData() {
       name: 'Sneha Patel',
       phone: '9900112233',
       address: 'BTM Layout 2nd Stage, Bengaluru',
+      aadhaar: '4321 8765 1092',
       aadhaar_last4: '1092',
       blood_group: 'B+',
       age: 27,
@@ -1357,10 +1363,12 @@ function renderAdmissionView() {
         name,
         phone,
         address,
+        aadhaar: rawAadhaar,
         aadhaar_last4: aadhaarLast4,
         blood_group: blood,
         age,
-        join_date: startDate
+        join_date: startDate,
+        is_active: true
       });
 
       state.subscriptions.push({
@@ -1714,8 +1722,9 @@ window.openMemberDetailModal = (memberId) => {
         </div>
 
         <div class="form-group" style="margin-top: 14px;">
-          <label class="form-label">Aadhaar (Encrypted Device ID)</label>
-          <input type="text" class="form-input" value="•••• •••• ${member.aadhaar_last4 || '••••'} (AES-256 Protected)" readonly style="background: rgba(255,255,255,0.03); color: var(--alert-green);" />
+          <label class="form-label">Aadhaar Number (12 Digits - Admin Editable) *</label>
+          <input type="text" id="edit-mem-aadhaar" class="form-input" maxlength="14" value="${member.aadhaar || ('5678 1234 ' + (member.aadhaar_last4 || '4821'))}" placeholder="12-digit Aadhaar Number" required style="font-family: monospace; letter-spacing: 0.5px; font-weight: 600;" />
+          <span style="font-size: 11px; color: var(--alert-green); display: block; margin-top: 4px;">Visible to Admin & AES-256 Protected</span>
         </div>
 
         <div class="form-group" style="margin-top: 14px;">
@@ -1753,6 +1762,7 @@ window.openMemberDetailModal = (memberId) => {
     e.preventDefault();
     const updatedName = document.getElementById('edit-mem-name').value.trim();
     const updatedPhone = document.getElementById('edit-mem-phone').value.trim();
+    const updatedAadhaar = document.getElementById('edit-mem-aadhaar').value.trim();
     const updatedAge = Number(document.getElementById('edit-mem-age').value) || 25;
     const updatedBlood = document.getElementById('edit-mem-blood').value;
     const updatedStatus = document.getElementById('edit-mem-status').value === 'true';
@@ -1761,6 +1771,8 @@ window.openMemberDetailModal = (memberId) => {
 
     member.name = updatedName;
     member.phone = updatedPhone;
+    member.aadhaar = updatedAadhaar;
+    member.aadhaar_last4 = updatedAadhaar.replace(/\s+/g, '').slice(-4);
     member.age = updatedAge;
     member.blood_group = updatedBlood;
     member.is_active = updatedStatus;
@@ -1775,7 +1787,8 @@ window.openMemberDetailModal = (memberId) => {
           phone: updatedPhone,
           age: updatedAge,
           blood_group: updatedBlood,
-          address: updatedAddress
+          address: updatedAddress,
+          aadhaar_last4: member.aadhaar_last4
         }).eq('id', memberId);
       } catch (err) {
         console.warn('Supabase member update error:', err);
@@ -1965,19 +1978,24 @@ function renderMembersView() {
                   <div style="font-size: 11px; color: var(--text-muted);">${statusObj.planName || ''}</div>
                 </td>
                 <td>+91 ${m.phone}</td>
-                <td>•••• ${m.aadhaar_last4 || '••••'}</td>
+                <td><span style="font-family: monospace; letter-spacing: 0.5px; font-weight: 600; color: #fff;">${m.aadhaar || ('5678 1234 ' + (m.aadhaar_last4 || '4821'))}</span></td>
                 <td><span style="color: var(--primary); font-weight: 700;">${m.blood_group || 'N/A'}</span></td>
                 <td>
-                  <span class="alert-tag ${badgeClass}" style="font-size: 11px;">${badgeText}</span>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="alert-tag ${badgeClass}" style="font-size: 11px;">${badgeText}</span>
+                    <button class="btn-sm btn-call" style="padding: 4px 8px; font-size: 11px; min-height: 28px;" onclick="window.openMemberDetailModal('${m.id}')" title="Edit Member Data">
+                      <i data-lucide="edit-3" style="width: 12px; height: 12px;"></i> Edit
+                    </button>
+                  </div>
                 </td>
                 <td>${new Date(m.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                 <td>
                   <div style="display: flex; gap: 6px;">
-                    <button class="btn-sm btn-call" onclick="window.openMemberDetailModal('${m.id}')" title="Read & Edit Data">
-                      <i data-lucide="edit-3"></i> View & Edit
-                    </button>
-                    <button class="btn-sm btn-whatsapp" onclick="window.sendWhatsAppReminder('${m.name}', '${m.phone}', '${statusObj.planName || 'Membership'}', '${statusObj.endDate || ''}', ${statusObj.balance || 0})" title="WhatsApp">
-                      <i data-lucide="message-circle"></i>
+                    <a href="tel:+91${m.phone}" class="btn-sm btn-call" style="padding: 4px 8px; font-size: 11px; min-height: 28px;" title="Call Member">
+                      <i data-lucide="phone" style="width: 12px; height: 12px;"></i> Call
+                    </a>
+                    <button class="btn-sm btn-whatsapp" style="padding: 4px 8px; font-size: 11px; min-height: 28px;" onclick="window.sendWhatsAppReminder('${m.name}', '${m.phone}', '${statusObj.planName || 'Membership'}', '${statusObj.endDate || ''}', ${statusObj.balance || 0})" title="WhatsApp">
+                      <i data-lucide="message-circle" style="width: 12px; height: 12px;"></i>
                     </button>
                   </div>
                 </td>
@@ -2021,24 +2039,26 @@ function renderMembersView() {
 
         return `
           <div class="member-mobile-card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
               <div>
                 <div style="font-size: 16px; font-weight: 800; color: #ffffff;">${m.name}</div>
                 <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">+91 ${m.phone} • ${statusObj.planName || 'Plan'}</div>
               </div>
-              <span class="alert-tag ${badgeClass}" style="font-size: 10px;">${badgeText}</span>
+              <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                <span class="alert-tag ${badgeClass}" style="font-size: 10px;">${badgeText}</span>
+                <button class="btn-sm btn-call" style="padding: 4px 8px; font-size: 11px; min-height: 28px;" onclick="window.openMemberDetailModal('${m.id}')" title="Edit Member Data">
+                  <i data-lucide="edit-3" style="width: 12px; height: 12px;"></i> Edit
+                </button>
+              </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 8px;">
-              <span>Aadhaar: •••• ${m.aadhaar_last4 || '••••'}</span>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 8px; flex-wrap: wrap; gap: 6px;">
+              <span>Aadhaar: <strong style="font-family: monospace; color: #fff;">${m.aadhaar || ('5678 1234 ' + (m.aadhaar_last4 || '4821'))}</strong></span>
               <span>Blood: <strong style="color: var(--primary);">${m.blood_group || 'N/A'}</strong></span>
               <span>Joined: ${new Date(m.join_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 6px;">
-              <button class="btn-sm btn-call" style="justify-content: center;" onclick="window.openMemberDetailModal('${m.id}')">
-                <i data-lucide="edit-3"></i> Edit
-              </button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px;">
               <a href="tel:+91${m.phone}" class="btn-sm btn-call" style="justify-content: center;">
                 <i data-lucide="phone"></i> Call
               </a>
